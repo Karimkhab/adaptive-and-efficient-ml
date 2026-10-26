@@ -1,0 +1,67 @@
+{
+  "controller": "deterministic heuristic, privileged state; no RL training",
+  "python": "3.12.14",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "jax": "0.6.2",
+  "devices": [
+    "TFRT_CPU_0"
+  ],
+  "results": [
+    {
+      "map_id": 0,
+      "seed": 0,
+      "steps": 892,
+      "simulation_seconds": 29.733333333333334,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 137.85342980222777,
+      "final_distance": 1.1732407808303833,
+      "min_clearance": 0.4191420078277588,
+      "max_speed": 2.9999542236328125,
+      "execution_seconds": 0.165060250001261
+    },
+    {
+      "map_id": 1,
+      "seed": 0,
+      "steps": 892,
+      "simulation_seconds": 29.733333333333334,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 137.85342980222777,
+      "final_distance": 1.1732407808303833,
+      "min_clearance": 0.4191420078277588,
+      "max_speed": 2.9999542236328125,
+      "execution_seconds": 0.13154975001816638
+    },
+    {
+      "map_id": 2,
+      "seed": 0,
+      "steps": 1363,
+      "simulation_seconds": 45.43333333333333,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 137.95930789783597,
+      "final_distance": 1.1780195236206055,
+      "min_clearance": 0.09453368186950684,
+      "max_speed": 2.8881173133850098,
+      "execution_seconds": 0.19527475000359118
+    },
+    {
+      "map_id": 3,
+      "seed": 0,
+      "steps": 342,
+      "simulation_seconds": 11.4,
+      "goal_reached": false,
+      "collision": true,
+      "truncated": false,
+      "return": -82.11682972870767,
+      "final_distance": 19.97682762145996,
+      "min_clearance": -0.0005252361297607422,
+      "max_speed": 2.9999985694885254,
+      "execution_seconds": 0.0498477500223089
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "maps": [
+    {
+      "map_id": 0,
+      "seed": 0,
+      "steps": 894,
+      "simulation_seconds": 29.8,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 138.04645491437986,
+      "final_distance": 0.973548948764801,
+      "min_clearance": 0.4191420078277588,
+      "max_speed": 2.9999542236328125,
+      "execution_seconds": 6.939816874975804
+    },
+    {
+      "map_id": 2,
+      "seed": 0,
+      "steps": 1402,
+      "simulation_seconds": 46.733333333333334,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 138.04289028514177,
+      "final_distance": 0.9644354581832886,
+      "min_clearance": 0.5792896747589111,
+      "max_speed": 2.8881173133850098,
+      "execution_seconds": 10.767656499985605
+    },
+    {
+      "map_id": 3,
+      "seed": 0,
+      "steps": 702,
+      "simulation_seconds": 23.4,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 135.6992191504687,
+      "final_distance": 0.9607810974121094,
+      "min_clearance": 0.7208986282348633,
+      "max_speed": 2.9999985694885254,
+      "execution_seconds": 5.295498208026402
+    }
+  ],
+  "fps": 30
+}
