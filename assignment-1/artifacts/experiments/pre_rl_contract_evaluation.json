@@ -1,0 +1,71 @@
+{
+  "controller": "deterministic heuristic, privileged state; no RL training",
+  "python": "3.12.14",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "jax": "0.6.2",
+  "devices": [
+    "TFRT_CPU_0"
+  ],
+  "results": [
+    {
+      "map_id": 0,
+      "seed": 0,
+      "steps": 1693,
+      "simulation_seconds": 56.43333333333333,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 163.39709546184167,
+      "final_distance": 0.9595718383789062,
+      "min_clearance": 0.21389555931091309,
+      "max_speed": 2.9999985694885254,
+      "execution_seconds": 0.3219286249986908
+    },
+    {
+      "map_id": 1,
+      "seed": 0,
+      "steps": 1641,
+      "simulation_seconds": 54.699999999999996,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 163.54399296734482,
+      "final_distance": 0.9860076904296875,
+      "min_clearance": 0.21335554122924805,
+      "max_speed": 2.9999985694885254,
+      "execution_seconds": 0.28708341699893936
+    },
+    {
+      "map_id": 2,
+      "seed": 0,
+      "steps": 1932,
+      "simulation_seconds": 64.4,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 165.4403679119423,
+      "final_distance": 0.9207354187965393,
+      "min_clearance": 0.05652618408203125,
+      "max_speed": 2.9784696102142334,
+      "execution_seconds": 0.3634457080006541
+    },
+    {
+      "map_id": 3,
+      "seed": 0,
+      "steps": 659,
+      "simulation_seconds": 21.966666666666665,
+      "goal_reached": true,
+      "collision": false,
+      "truncated": false,
+      "return": 161.86066953232512,
+      "final_distance": 0.9426651000976562,
+      "min_clearance": 1.8072078227996826,
+      "max_speed": 2.9999985694885254,
+      "execution_seconds": 0.10415633299999172
+    }
+  ],
+  "source_commit": "1629a46e6be728ab386ae3e6bd80af6d0f2cb977",
+  "observation_version": 1,
+  "observation_size": 38,
+  "goal_required_stop": false
+}

@@ -39,7 +39,7 @@ def main():
                 writer.append_data(frontend.frame())
 
             def on_frame(state, obs, info, p, current_map):
-                if int(state.time) % args.speed and not bool(state.terminated):
+                if int(state.time) % args.speed and not bool(state.done):
                     return
                 frontend.state, frontend.obs, frontend.info = state, obs, info
                 episode_return = (initial_distance - float(info["distance_to_goal"])

@@ -154,10 +154,10 @@ class TaxiFrontend(PygameFrontend):
             self.label(f"{self.playback_speed}x PLAYBACK", (410, 70), MUTED, small=True)
         status = "PAUSED" if self.paused else "RUNNING"
         status_color = TEAL
-        if bool(s.terminated):
-            status = "ARRIVED" if bool(self.info.get("goal_reached", False)) else (
+        if bool(s.done):
+            status = "PARKED" if bool(self.info.get("goal_reached", False)) else (
                 "COLLISION" if bool(self.info.get("collision", False)) else "TIME LIMIT")
-            status_color = TEAL if status == "ARRIVED" else (245, 124, 102)
+            status_color = TEAL if status == "PARKED" else (245, 124, 102)
         pygame.draw.rect(self.screen, (26, 43, 54), (1052, 24, 204, 54), border_radius=14)
         self.label(status, (1072, 42), status_color)
         pygame.draw.rect(self.screen, (29, 41, 52), self.world, border_radius=20)
@@ -274,7 +274,7 @@ class TaxiFrontend(PygameFrontend):
             self.running = False
         elif event.key == pygame.K_TAB:
             self.demo = not self.demo
-            if bool(self.state.terminated):
+            if bool(self.state.done):
                 self.reset_episode()
                 return True
         elif event.key == pygame.K_SPACE:
@@ -311,7 +311,7 @@ class TaxiFrontend(PygameFrontend):
                         episode_return = 0.
                 if not self.running:
                     break
-                if not self.paused and not bool(self.state.terminated):
+                if not self.paused and not bool(self.state.done):
                     action = demo_action(self.state, self.params) if self.demo else self.handle_keys()
                     self.obs, self.state, reward, _, self.info = RobotaxiEnv.step(self.key, self.state, action, self.params)
                     self.info["action"] = action
@@ -319,7 +319,7 @@ class TaxiFrontend(PygameFrontend):
                 self.draw(self.map_id, "Heuristic controller" if self.demo else "Manual drive", episode_return)
                 if writer:
                     writer.append_data(self.frame())
-                if bool(self.state.terminated) and (record or self.headless):
+                if bool(self.state.done) and (record or self.headless):
                     if writer:
                         for _ in range(self.params.fps * 2):
                             writer.append_data(self.frame())

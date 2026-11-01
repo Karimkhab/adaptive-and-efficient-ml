@@ -13,15 +13,34 @@
 
 ## Установка
 
-Проверено на Python 3.12.14, macOS arm64, JAX CPU. В терминале:
+Нужен **Python 3.12**, CPU. Docker и GPU не требуются. Сначала:
 
 ```bash
 git clone --branch Submission https://github.com/Karimkhab/adaptive-and-efficient-ml.git
 cd adaptive-and-efficient-ml/assignment-1
+```
+
+Linux / macOS:
+
+```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-lock.txt
 ```
+
+Windows PowerShell (активация окружения не нужна):
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-lock.txt
+.\.venv\Scripts\python.exe src/main.py --map 2 --demo
+```
+
+Для остальных команд ниже на Windows используйте `.\.venv\Scripts\python.exe`
+вместо `python`. Поддерживаемые цели: macOS arm64, Linux x86-64 и Windows x86-64.
+Нативные проверки Linux/Windows выполняет
+[GitHub Actions](https://github.com/Karimkhab/adaptive-and-efficient-ml/actions/workflows/assignment-1.yml):
+тесты, 32 сценария, интерфейс RL, запись и декодирование видео без дисплея.
 
 ## Запуск и управление
 
@@ -44,16 +63,39 @@ python src/main.py --map 0          # управление с клавиатур
 ## Проверки и видео
 
 ```bash
-JAX_PLATFORM_NAME=cpu python -m pytest -q
-JAX_PLATFORM_NAME=cpu python src/evaluate.py
+python -m pytest -q
+python src/evaluate.py
+python src/scenarios.py
+python examples/rl_smoke.py
 python src/make_video.py           # MP4, 1280×800, 30 FPS, воспроизведение 2x
 python src/make_video.py --speed 1 # запись в реальном времени
 ```
 
-В `artifacts/` сохранены 33 пройденных теста, четыре успешные поездки, CSV и видео.
+В `artifacts/` сохранены 41 пройденный тест, четыре базовые поездки, результаты
+32 вариантов старта/трафика, CSV и видео. Успех требует остановки в радиусе 1
+со скоростью не выше 0.001; таймаут — 3000 шагов / 100 секунд.
 Симуляция всегда работает с шагом 1/30 с; при ускорении видео есть метка 2x,
 а таймер показывает время симуляции. Сценарии детерминированы; это проверка среды,
 а не оценка обученного агента. Подробности и ограничения — в отчёте.
+
+## Интерфейс для Assignment 2
+
+Наблюдение **v2** — 70 чисел `float32` при 32 лучах: скорость, цель и путь в
+системе машины, расстояние до пути, дальности и скорости сближения по лучам.
+Старый формат v1 из 38 чисел больше не используется. Действие `(2,)` в `[-1,1]`:
+ускорение/тормоз и руль. Размер: `RobotaxiEnv.observation_size(params)`.
+
+`step` возвращает `(obs, state, reward, done, info)`. `done` заканчивает эпизод;
+`info["terminated"]` означает успех/столкновение, `info["truncated"]` — таймаут.
+`AutoResetWrapper` сохраняет настоящее `info["final_observation"]` до reset;
+`info["final_observation_valid"]` отмечает завершившийся переход. Для bootstrap
+на таймауте используется последнее наблюдение, а маска равна `1 - terminated`.
+
+`reset(key, params, initial, randomize=True)` воспроизводимо варьирует курс
+(±10°), скорость (0–0.5), темп трафика (0.8–1.2) и его фазу (0–1 с), сохраняя
+формы массивов. По умолчанию reset фиксированный. Есть пакетный JIT/vmap-тест
+и пример политики, получающей только наблюдение, в `examples/rl_smoke.py`.
+Это подготовка интерфейса; RL-модель ещё не обучалась.
 
 ## Где код и источники
 

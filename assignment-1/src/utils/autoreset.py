@@ -11,6 +11,7 @@ class AutoResetWrapper(equinox.Module):
     env: BaseEnv = equinox.field(static=True)
     env_params: BaseEnvParams = equinox.field(static=True)
     init_state: BaseEnvState
+    randomize: bool = equinox.field(static=True, default=False)
 
     @equinox.filter_jit
     def reset(
@@ -21,8 +22,10 @@ class AutoResetWrapper(equinox.Module):
         # init_state: BaseEnvState | None,
     ) -> Tuple[chex.Array, BaseEnvState]:
         # Just call original reset
-        jax.debug.print("Autoreset!")
-        obs, state = self.env.reset(key, self.env_params, self.init_state)
+        if self.randomize:
+            obs, state = self.env.reset(key, self.env_params, self.init_state, randomize=True)
+        else:
+            obs, state = self.env.reset(key, self.env_params, self.init_state)
         return obs, state
 
     @equinox.filter_jit
@@ -38,12 +41,13 @@ class AutoResetWrapper(equinox.Module):
         Returns: obs, state, reward, done, info
         But auto-resets if done=True
         """
+        step_key, reset_key = jax.random.split(key)
         obs, new_state, reward, done, info = self.env.step(
-            key, state, action, self.env_params
+            step_key, state, action, self.env_params
         )
 
         def reset_state(_):
-            new_obs, new_st = self.reset(key, self.env_params, self.init_state)
+            new_obs, new_st = self.reset(reset_key, self.env_params, self.init_state)
             # new_info = {"time": 0, "distance_to_path": new_obs.distance_to_path}
             # NOTE: we pass the reward from outside this context
             return new_obs, new_st, reward, info

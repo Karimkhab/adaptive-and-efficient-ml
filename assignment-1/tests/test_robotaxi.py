@@ -27,7 +27,7 @@ def test_interface_reset_and_finite_observation(env):
     p, s = env
     assert issubclass(RobotaxiEnv, BaseEnv)
     obs, reset = RobotaxiEnv.reset(KEY, p, s)
-    assert obs.as_vector().shape == (38,)
+    assert obs.as_vector().shape == (70,)
     assert np.isfinite(obs.as_vector()).all()
     assert obs.collision_rays.shape == (32, 2)
     np.testing.assert_array_equal(reset.agent_pos, s.agent_pos)

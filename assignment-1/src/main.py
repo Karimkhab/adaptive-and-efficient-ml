@@ -10,7 +10,7 @@ def main():
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--record", help="MP4 output path")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--max-steps", type=int, default=2400)
+    parser.add_argument("--max-steps", type=int, default=3000)
     args = parser.parse_args()
     if args.headless and not args.demo:
         parser.error("--headless requires --demo")

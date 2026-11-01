@@ -18,6 +18,7 @@ class TaxiParams(BaseEnvParams):
     cell_size: float
     radius: float
     goal_radius: float
+    goal_speed: float
     wheelbase: float
     max_speed: float
     max_accel: float
@@ -35,6 +36,11 @@ class TaxiState(BaseEnvState):
     heading: chex.Array
     speed: chex.Array
     terminated: chex.Array
+    truncated: chex.Array
+
+    @property
+    def done(self):
+        return self.terminated | self.truncated
 
 
 class TaxiObservation(eqx.Module):
@@ -46,12 +52,14 @@ class TaxiObservation(eqx.Module):
     path_local: chex.Array
     speed: chex.Array
     ray_distances: chex.Array
+    ray_closing_speeds: chex.Array
 
     def as_vector(self):
         return jnp.concatenate([
-            jnp.atleast_1d(self.speed), self.goal_local, self.path_local,
-            jnp.atleast_1d(self.distance_to_path), self.ray_distances,
-        ]).astype(jnp.float32)
+            self.speed[..., None], self.goal_local, self.path_local,
+            self.distance_to_path[..., None], self.ray_distances,
+            self.ray_closing_speeds,
+        ], axis=-1).astype(jnp.float32)
 
 
 def wrap_angle(angle):
@@ -178,8 +186,15 @@ def move_obstacles(state, params):
 
 
 class RobotaxiEnv(BaseEnv):
+    OBSERVATION_VERSION = 2
+    ACTION_SHAPE = (2,)
+
     @staticmethod
-    def init_params(key, map_id=0, max_steps=2400, path_length=100,
+    def observation_size(env_params):
+        return 6 + 2 * env_params.num_ray_sensors
+
+    @staticmethod
+    def init_params(key, map_id=0, max_steps=3000, path_length=100,
                     discretization_scale=1, perception_radius=12.,
                     num_ray_sensors=32, fov=math.pi, fps=30,
                     cell_size=5., radius=1.):
@@ -209,7 +224,7 @@ class RobotaxiEnv(BaseEnv):
             path_array_shape_dtype=((path_length, 2), jnp.float32),
             discretization_scale=1, num_ray_sensors=num_ray_sensors,
             agent_FOV=fov, perception_radius=perception_radius,
-            cell_size=cell_size, radius=radius, goal_radius=radius,
+            cell_size=cell_size, radius=radius, goal_radius=radius, goal_speed=0.001,
             wheelbase=1.5, max_speed=5., max_accel=3., max_brake=5.,
             max_steer=0.6, drag=0.18, rolling_friction=0.12,
             progress_weight=1., goal_bonus=100., collision_penalty=100., time_cost=0.1,
@@ -228,13 +243,15 @@ class RobotaxiEnv(BaseEnv):
             kinematic_obst_velocities=task.kinematic_obst_velocities.astype(jnp.float32),
             path_array=plan_path(pos, goal, obstacles, p), heading=heading,
             speed=jnp.array(0., dtype=jnp.float32), terminated=jnp.array(False),
+            truncated=jnp.array(False),
         )
         return p, state
 
     @staticmethod
-    @partial(jax.jit, static_argnames=("env_params",))
-    def reset(key, env_params, init_state):
-        del key
+    @partial(jax.jit, static_argnames=("env_params", "randomize"))
+    def reset(key, env_params, init_state, randomize=False):
+        if randomize:
+            init_state = sample_initial_state(key, env_params, init_state)
         return RobotaxiEnv.get_observation(init_state, env_params), init_state
 
     @staticmethod
@@ -256,10 +273,21 @@ class RobotaxiEnv(BaseEnv):
         obstacles = jnp.concatenate([s.static_obstacles, s.kinematic_obstacles])
         rays = BaseEnv._generate_rays(s.agent_forward_dir, p.num_ray_sensors, p.agent_FOV)
         if obstacles.shape[0]:
-            lengths = BaseEnv._ray_circle_intersections(s.agent_pos, rays, obstacles, p.radius)
-            lengths = jnp.minimum(lengths, p.perception_radius)
+            hits = jax.vmap(lambda center: BaseEnv._ray_circle_intersections(
+                s.agent_pos, rays, center[None, :], p.radius
+            ), out_axes=1)(obstacles)
+            nearest_obstacle = jnp.argmin(hits, axis=1)
+            raw_lengths = jnp.min(hits, axis=1)
+            lengths = jnp.minimum(raw_lengths, p.perception_radius)
+            obstacle_velocity = jnp.concatenate([
+                jnp.zeros_like(s.static_obstacles), s.kinematic_obst_velocities])
+            relative_velocity = obstacle_velocity[nearest_obstacle] - s.speed * s.agent_forward_dir
+            closing = -jnp.sum(relative_velocity * rays, axis=1)
+            speed_scale = p.max_speed + jnp.max(jnp.linalg.norm(obstacle_velocity, axis=1), initial=0.)
+            closing = jnp.where(raw_lengths <= p.perception_radius, closing / speed_scale, 0.)
         else:
             lengths = jnp.full((p.num_ray_sensors,), p.perception_radius)
+            closing = jnp.zeros((p.num_ray_sensors,))
         map_diagonal = p.cell_size * math.hypot(*p.map_height_width)
         return TaxiObservation(
             distance_to_path=path_distance / p.cell_size,
@@ -267,6 +295,7 @@ class RobotaxiEnv(BaseEnv):
             goal_local=to_local(s.goal_pos - s.agent_pos, s.heading) / map_diagonal,
             path_local=to_local(direction, s.heading), speed=s.speed / p.max_speed,
             ray_distances=lengths / p.perception_radius,
+            ray_closing_speeds=closing,
         )
 
     @staticmethod
@@ -274,6 +303,9 @@ class RobotaxiEnv(BaseEnv):
     def step(key, env_state, action, env_params):
         del key
         s, p = env_state, env_params
+        action = jnp.asarray(action, dtype=jnp.float32)
+        if action.shape != RobotaxiEnv.ACTION_SHAPE:
+            raise ValueError("Action must have shape (2,): acceleration and steering")
         position, heading, speed = vehicle_motion(s.agent_pos, s.heading, s.speed, action, p)
         low = jnp.array([p.radius, p.radius])
         high = (jnp.array(p.map_height_width[::-1]) - 1) * p.cell_size - p.radius
@@ -283,36 +315,64 @@ class RobotaxiEnv(BaseEnv):
         clearance = swept_clearance(s.agent_pos, position, before, after, p.radius)
         outside = jnp.any((position < low) | (position > high))
         collision = (clearance <= 0) | outside
-        reached = (jnp.linalg.norm(position - s.goal_pos) <= p.goal_radius) & ~collision
+        reached = ((jnp.linalg.norm(position - s.goal_pos) <= p.goal_radius)
+                   & (speed <= p.goal_speed) & ~collision)
         time = s.time + 1
         truncated = (time >= p.max_steps_in_episode) & ~reached & ~collision
         done = collision | reached | truncated
         progress = jnp.linalg.norm(s.agent_pos - s.goal_pos) - jnp.linalg.norm(position - s.goal_pos)
         reward = (p.progress_weight * progress - p.time_cost * p.step_size
                   + p.goal_bonus * reached - p.collision_penalty * collision)
+        # Static geometry does not require snapping a new route every second.
+        # Keep the guide stable near it; replan after a genuine route deviation.
+        off_route = jnp.min(jnp.linalg.norm(s.path_array - position, axis=1)) > p.cell_size
         path = jax.lax.cond(
-            time % p.fps == 0,
+            (time % p.fps == 0) & off_route,
             lambda: plan_path(position, s.goal_pos, s.static_obstacles, p),
             lambda: s.path_array,
         )
         new_state = eqx.tree_at(
             lambda x: (x.time, x.agent_pos, x.agent_forward_dir, x.heading, x.speed,
                        x.kinematic_obstacles, x.kinematic_obst_velocities,
-                       x.path_array, x.terminated), s,
+                       x.path_array, x.terminated, x.truncated), s,
             (time, position, jnp.array([jnp.cos(heading), jnp.sin(heading)]), heading,
-             speed, reflected, velocities, path, done),
+             speed, reflected, velocities, path, reached | collision, truncated),
         )
-        new_state = jax.tree.map(lambda old, new: jnp.where(s.terminated, old, new), s, new_state)
-        reward = jnp.where(s.terminated, 0., reward)
+        new_state = jax.tree.map(lambda old, new: jnp.where(s.done, old, new), s, new_state)
+        reward = jnp.where(s.done, 0., reward)
         obs = RobotaxiEnv.get_observation(new_state, p)
         info = {
             "time": new_state.time, "speed": new_state.speed,
             "distance_to_goal": jnp.linalg.norm(new_state.agent_pos - s.goal_pos),
             "distance_to_path": obs.distance_to_path,
             "direction_of_path": obs.direction_of_path,
-            "goal_reached": reached & ~s.terminated,
-            "collision": collision & ~s.terminated,
-            "truncated": truncated & ~s.terminated,
-            "clearance": jnp.where(s.terminated, jnp.inf, clearance),
+            "goal_reached": reached & ~s.done,
+            "collision": collision & ~s.done,
+            "terminated": new_state.terminated,
+            "truncated": new_state.truncated,
+            "clearance": jnp.where(s.done, jnp.inf, clearance),
+            "final_observation": obs.as_vector(),
+            "final_observation_valid": new_state.done,
         }
-        return obs, new_state, reward, new_state.terminated, info
+        return obs, new_state, reward, new_state.done, info
+
+
+def sample_initial_state(key, params, initial):
+    """Optional reproducible training resets, with unchanged shapes and map.
+
+    Heading +/-10 degrees, initial speed [0,.5], traffic speed [.8,1.2],
+    and phase [0,1] second. Fixed evaluation reset remains the default.
+    """
+    angle_key, speed_key, traffic_key, phase_key = jax.random.split(key, 4)
+    heading = initial.heading + jax.random.uniform(angle_key, (), minval=-math.pi/18, maxval=math.pi/18)
+    speed = jax.random.uniform(speed_key, (), minval=0., maxval=.5)
+    scale = jax.random.uniform(traffic_key, (), minval=.8, maxval=1.2)
+    state = eqx.tree_at(lambda s: (s.heading, s.agent_forward_dir, s.speed, s.kinematic_obst_velocities),
+                        initial, (heading, jnp.array([jnp.cos(heading), jnp.sin(heading)]),
+                                  speed, initial.kinematic_obst_velocities * scale))
+    phase = jax.random.randint(phase_key, (), 0, params.fps + 1)
+    def advance(_, state):
+        positions, velocities = move_obstacles(state, params)
+        return eqx.tree_at(lambda s: (s.kinematic_obstacles, s.kinematic_obst_velocities),
+                            state, (positions, velocities))
+    return jax.lax.fori_loop(0, phase, advance, state)

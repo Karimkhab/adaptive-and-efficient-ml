@@ -21,3 +21,4 @@ setuptools==84.2.1
 toolz==1.2.0
 typing_extensions==4.16.0
 wadler_lindig==0.1.8
+colorama==0.4.6; sys_platform == 'win32'
