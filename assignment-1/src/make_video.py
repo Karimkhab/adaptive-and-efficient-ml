@@ -23,6 +23,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--maps", nargs="+", type=int, default=[0, 2, 3])
     parser.add_argument("--output", type=Path, default=Path("artifacts/demo.mp4"))
+    parser.add_argument("--speed", type=int, choices=[1, 2], default=2,
+                        help="Playback rate; simulation always runs at 30 Hz")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     results = []
@@ -30,12 +32,15 @@ def main():
         for map_id in args.maps:
             params, initial = RobotaxiEnv.init_params(jax.random.PRNGKey(0), map_id=map_id)
             frontend = TaxiFrontend(params, initial, headless=True)
+            frontend.playback_speed = args.speed
             initial_distance = float(np.linalg.norm(initial.agent_pos - initial.goal_pos))
             frontend.draw(map_id, "Heuristic controller / no training")
             for _ in range(30):
                 writer.append_data(frontend.frame())
 
             def on_frame(state, obs, info, p, current_map):
+                if int(state.time) % args.speed and not bool(state.terminated):
+                    return
                 frontend.state, frontend.obs, frontend.info = state, obs, info
                 episode_return = (initial_distance - float(info["distance_to_goal"])
                                   - int(state.time) * p.step_size * p.time_cost
@@ -53,7 +58,10 @@ def main():
                 writer.append_data(frontend.frame())
             pygame.quit()
             print(json.dumps(result), flush=True)
-    args.output.with_suffix(".json").write_text(json.dumps({"maps": results, "fps": 30}, indent=2) + "\n")
+    args.output.with_suffix(".json").write_text(json.dumps({
+        "maps": results, "fps": 30, "resolution": [1280, 800],
+        "playback_speed": args.speed,
+    }, indent=2) + "\n")
 
 
 if __name__ == "__main__":

@@ -33,7 +33,7 @@ def rollout(map_id, seed=0, max_steps=2400, on_frame=None):
                      float(state.heading), float(state.speed),
                      *np.asarray(action).tolist(), float(reward), float(info["clearance"])])
         if on_frame is not None:
-            on_frame(state, obs, info, p, map_id)
+            on_frame(state, obs, dict(info, action=action), p, map_id)
         if bool(done):
             break
     elapsed = time.perf_counter() - start

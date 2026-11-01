@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from env.base import BaseEnv
-from env.robotaxi import RobotaxiEnv, vehicle_motion, swept_clearance, plan_path
+from env.robotaxi import RobotaxiEnv, vehicle_motion, swept_clearance, move_obstacles
 from utils.autoreset import AutoResetWrapper
 
 KEY = jax.random.PRNGKey(0)
@@ -179,3 +179,47 @@ def test_complete_demo_rollout_is_finite_and_collision_free(map_id):
     assert not result["collision"] and not result["truncated"]
     assert result["min_clearance"] > 0
     assert np.isfinite(trajectory).all()
+
+
+@pytest.mark.parametrize("map_id", [0, 1, 2, 3])
+def test_scripted_traffic_does_not_pass_through_walls_or_other_objects(map_id):
+    p, initial = RobotaxiEnv.init_params(KEY, map_id=map_id)
+
+    def tick(state, _):
+        positions, velocities = move_obstacles(state, p)
+        clearance = jax.vmap(lambda a, b: swept_clearance(
+            a, b, state.static_obstacles, state.static_obstacles, p.radius
+        ))(state.kinematic_obstacles, positions)
+        distances = jnp.linalg.norm(positions[:, None] - positions[None, :], axis=-1)
+        distances = jnp.where(jnp.eye(positions.shape[0], dtype=jnp.bool_), jnp.inf, distances)
+        state = eqx.tree_at(lambda x: (x.kinematic_obstacles, x.kinematic_obst_velocities),
+                            state, (positions, velocities))
+        return state, (jnp.min(clearance), jnp.min(distances) - 2 * p.radius)
+
+    _, (wall_clearance, mutual_clearance) = jax.jit(
+        lambda state: jax.lax.scan(tick, state, None, length=3600)
+    )(initial)
+    assert np.isfinite(wall_clearance).all()
+    assert float(jnp.min(wall_clearance)) > 0
+    assert float(jnp.min(mutual_clearance)) > 0
+
+
+def test_traffic_reverses_before_a_static_wall(env):
+    p, state = env
+    state = replace(state, static_obstacles=jnp.array([[12.02, 10.]]),
+                    kinematic_obstacles=jnp.array([[10., 10.]]),
+                    kinematic_obst_velocities=jnp.array([[1., 0.]]))
+    positions, velocities = move_obstacles(state, p)
+    assert float(velocities[0, 0]) < 0
+    assert float(positions[0, 0]) < 10
+    assert float(jnp.linalg.norm(positions[0] - state.static_obstacles[0])) > 2
+
+
+def test_head_on_traffic_reverses_without_overlap(env):
+    p, state = env
+    state = replace(state, static_obstacles=jnp.empty((0, 2)),
+                    kinematic_obstacles=jnp.array([[10., 10.], [12.01, 10.]]),
+                    kinematic_obst_velocities=jnp.array([[1., 0.], [-1., 0.]]))
+    positions, velocities = move_obstacles(state, p)
+    assert float(velocities[0, 0]) < 0 < float(velocities[1, 0])
+    assert float(jnp.linalg.norm(positions[1] - positions[0])) > 2

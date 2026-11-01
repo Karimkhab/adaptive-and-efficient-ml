@@ -138,12 +138,51 @@ def swept_clearance(agent_before, agent_after, obstacles_before, obstacles_after
     return jnp.min(distances) - 2 * radius
 
 
+def move_obstacles(state, params):
+    """Scripted traffic: axis-aligned groups reverse before walls/each other.
+
+    Objects travelling along the same axis reverse together, preserving spacing
+    in the supplied h/v groups. This is kinematic traffic, not a rigid-body solver.
+    A conservative hold handles a step where neither direction is clear.
+    """
+    p = params
+    positions, velocities = state.kinematic_obstacles, state.kinematic_obst_velocities
+    if positions.shape[0] == 0:
+        return positions, velocities
+    low = jnp.array([p.radius, p.radius])
+    high = (jnp.array(p.map_height_width[::-1]) - 1) * p.cell_size - p.radius
+
+    def unsafe(candidate):
+        walls = jax.vmap(lambda a, b: swept_clearance(
+            a, b, state.static_obstacles, state.static_obstacles, p.radius
+        ))(positions, candidate) <= 1e-5
+        outside = jnp.any((candidate < low) | (candidate > high), axis=1)
+        relative = positions[:, None, :] - positions[None, :, :]
+        delta = (candidate - positions)[:, None, :] - (candidate - positions)[None, :, :]
+        t = jnp.clip(-jnp.sum(relative * delta, axis=-1) /
+                     jnp.maximum(jnp.sum(delta * delta, axis=-1), 1e-12), 0., 1.)
+        distance = jnp.linalg.norm(relative + t[..., None] * delta, axis=-1)
+        contact = (distance <= 2 * p.radius + 1e-5) & ~jnp.eye(positions.shape[0], dtype=jnp.bool_)
+        return walls | outside | jnp.any(contact, axis=1)
+
+    tentative = positions + p.step_size * velocities
+    hazard = unsafe(tentative)
+    axes = jnp.argmax(jnp.abs(velocities), axis=1)
+    same_group = axes[:, None] == axes[None, :]
+    reverse = jnp.any(same_group & hazard[None, :], axis=1)
+    velocities = jnp.where(reverse[:, None], -velocities, velocities)
+    candidate = positions + p.step_size * velocities
+    # No penetration is preferable to teleporting through a narrow passage.
+    hold = jnp.any(unsafe(candidate))
+    return jnp.where(hold, positions, candidate), velocities
+
+
 class RobotaxiEnv(BaseEnv):
     @staticmethod
     def init_params(key, map_id=0, max_steps=2400, path_length=100,
                     discretization_scale=1, perception_radius=12.,
                     num_ray_sensors=32, fov=math.pi, fps=30,
-                    cell_size=3., radius=1.):
+                    cell_size=5., radius=1.):
         del key
         if map_id not in (0, 1, 2, 3):
             raise ValueError("map_id must be 0, 1, 2 or 3 (open demonstration)")
@@ -238,11 +277,7 @@ class RobotaxiEnv(BaseEnv):
         position, heading, speed = vehicle_motion(s.agent_pos, s.heading, s.speed, action, p)
         low = jnp.array([p.radius, p.radius])
         high = (jnp.array(p.map_height_width[::-1]) - 1) * p.cell_size - p.radius
-        tentative = s.kinematic_obstacles + p.step_size * s.kinematic_obst_velocities
-        reflected = jnp.where(tentative < low, 2 * low - tentative,
-                             jnp.where(tentative > high, 2 * high - tentative, tentative))
-        velocities = jnp.where((tentative < low) | (tentative > high),
-                                -s.kinematic_obst_velocities, s.kinematic_obst_velocities)
+        reflected, velocities = move_obstacles(s, p)
         before = jnp.concatenate([s.static_obstacles, s.kinematic_obstacles])
         after = jnp.concatenate([s.static_obstacles, reflected])
         clearance = swept_clearance(s.agent_pos, position, before, after, p.radius)
