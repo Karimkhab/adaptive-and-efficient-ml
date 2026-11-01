@@ -41,6 +41,8 @@ py -3.12 -m venv .venv
 Нативные проверки Linux/Windows выполняет
 [GitHub Actions](https://github.com/Karimkhab/adaptive-and-efficient-ml/actions/workflows/assignment-1.yml):
 тесты, 32 сценария, интерфейс RL, запись и декодирование видео без дисплея.
+[Подтверждённый прогон](https://github.com/Karimkhab/adaptive-and-efficient-ml/actions/runs/41313584149):
+на каждой ОС 41/41 тест и 32/32 сценария.
 
 ## Запуск и управление
 
