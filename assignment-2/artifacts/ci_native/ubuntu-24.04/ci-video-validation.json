@@ -1,0 +1,16 @@
+{
+  "frames": 867,
+  "fps": 30.0,
+  "duration_seconds": 28.9,
+  "decoded_indices": [
+    0,
+    433,
+    866
+  ],
+  "frame_shape": [
+    800,
+    1280,
+    3
+  ],
+  "parked_episodes": 2
+}

@@ -401,13 +401,17 @@ requirements-lock.txt` → `pytest` → `evaluation_suite.py` → `benchmark.py`
     ci_path=root/'ci_results.json'
     if ci_path.exists():
         ci=json.loads(ci_path.read_text())
-        assert ci['passed']
+        assert ci['passed'] and len(ci['jobs'])==2 and all(j['conclusion']=='success' for j in ci['jobs'])
         text=text.replace('Проверена macOS arm64. A1 имеет успешный Linux/Windows CI; это не утверждение\nо запуске всего PPO-пакета A2 на этих ОС. Команды Windows и локально подготовленный\nworkflow позволяют повторить проверку; публикация/CI A2 отдельно не выполнялись.',
             'Проверены macOS arm64 и настоящий нативный CI A2 на Ubuntu24.04/Windows2022.\n'
             f"[CI-прогон]({ci['url']}) для кода `{ci['head_sha']}` успешен на обеих ОС.\n"
-            'На каждой ОС выполнены pytest, quality gate готовых моделей, полный набор срезов\nи запись/декодирование видео. Доказательства и исходы — в artifacts/ci_results.json.\nОконный интерфейс Linux/Windows вручную не проверялся.')
+            'На каждой ОС выполнены pytest, отдельный update обучения, quality gate готовых моделей,\nнабор всех срезов с уменьшенным CI-бюджетом и запись/декодирование видео.\nДоказательства — в artifacts/ci_results.json и ci_native/.\nОконный интерфейс Linux/Windows вручную не проверялся.')
         text=text.replace('Сообщение преподавателю и изменение удалённой Submission не выполнялись.',
             'Публикация main/Submission поручена пользователем2 ноября. Сообщение преподавателю не отправлялось.')
+        text+='\n## Подтверждённые артефакты нативного CI A2\n\n| ОС | Python | Тесты | Map2 parking | Endpoints | Обучение | Видео | Срезы / эпизоды |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n'
+        for job in ci['jobs']:
+            text+=f"| {job['os']} | {job['runtime']['python']} | {job['tests']}/{job['tests']}, без пропусков | {job['map2_parked']}/{job['map2_cases']},0 collision | {job['endpoint_parked']}/{job['endpoint_cases']} | 1 update, actor изменился | {job['video']['parked_episodes']} парковки; 3 декодированных кадра | {job['evaluation_slices']} / {job['evaluation_episodes']} |\n"
+        text+='\nПервый запуск не исполнял runners из-за YAML-экранирования `:all:`. Ошибка\nисправлена отдельным коммитом до успешного прогона; её история сохранена в ci_results.json.\n'
     text=re.sub(r'(?<=[А-Яа-я])(?=\d)', ' ',text)
     text=re.sub(r'(?<=\d)(?=[А-Яа-я])', ' ',text)
     text=re.sub(r'(?<=seeds)(?=\d)', ' ',text)

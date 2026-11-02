@@ -42,8 +42,10 @@ python -m pip check
 ```
 
 При запрете активации PowerShell можно вызывать `.\.venv\Scripts\python.exe`
-вместо `python`. Скрипты сами выбирают CPU. Нативный CI для A1 прошёл Linux и
-Windows; результаты проверки A2 на macOS и границы переносимости описаны в отчёте.
+вместо `python`. Скрипты сами выбирают CPU. [Настоящий CI A2](https://github.com/Karimkhab/adaptive-and-efficient-ml/actions/runs/41421653274)
+прошёл Linux и Windows: на каждой ОС51 тест, update обучения,128/128 новых
+стартов map2,8/8 endpoint cases и запись/декодирование видео. Доказательства
+и точные версии находятся в отчёте и `artifacts/ci_native/`.
 
 ## Проверить и запустить готовую модель
 
