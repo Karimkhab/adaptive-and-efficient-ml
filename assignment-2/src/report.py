@@ -1,422 +1,78 @@
-"""Render a factual Markdown report from the saved final measurements."""
-import csv
+"""Verify the human-written report against saved measurements; never overwrite it."""
+import argparse
 import json
-import re
 from pathlib import Path
-import jax
-from ppo import load_checkpoint
+import re
+from urllib.parse import unquote
 
 
-def wilson(k, n):
-    z = 1.96
-    center = (k/n + z*z/(2*n)) / (1 + z*z/n)
-    radius = z*((k/n*(1-k/n)/n + z*z/(4*n*n))**.5)/(1+z*z/n)
-    return f"{100*(center-radius):.1f}–{100*(center+radius):.1f}%"
+def table_rows(text):
+    return [[cell.strip() for cell in line.strip().strip('|').split('|')]
+            for line in text.splitlines() if line.lstrip().startswith('|')]
 
 
-def map2_safety_report(root,lookup):
-    text="""## Доработка карты2: скорость, зазор и частота обратной связи
+def verify(report):
+    root=report.parent
+    text=report.read_text(encoding="utf-8")
+    rows=table_rows(text)
+    data=json.loads((root/'artifacts/evaluation/summary.json').read_text(encoding="utf-8"))['results']
+    results={r['name']:r for r in data}
+    checked=[]
 
-Прежняя модель дала124/128 парковок: два удара о статическую стену и два о
-трафик на одном левом повороте. Скорости в этих столкновениях3.54–4.11; газ
-оставался положительным. Полные контексты и последние120 шагов — в
-`artifacts/map2_diagnosis/`. Эти случаи после обнаружения считаются регрессией,
-а не независимым тестом. Исходная оценка сохранена в `evaluation_initial/`.
+    def require_row(cells,label):
+        if cells not in rows:
+            raise ValueError(f'Report row differs from saved evidence ({label}): {cells}')
+        checked.append(label)
 
-Проверены два варианта дообучения исходных весов map2 после1600 updates.
-A: cruise2.5, speed-cost1, clearance-cost4, margin1, seed0. B: cruise3,
-speed-cost0.75, clearance-cost6, margin1.25, seed1. У обоих Adam1e-4 и
-entropy-coefficient0.0, по800 дополнительных updates. Штраф за скорость
-использует target `min(cruise, sqrt(3*max(goal_distance-.3,0)),
-sqrt(4*max(clearance-.5,0)))`; штраф за малый зазор —
-`clearance_cost * max(margin-clearance,0)^2 * executed_seconds`.
-Плотная награда рассчитывается средой по геометрии во время обучения;
-runtime actor по-прежнему получает только70 наблюдений. Ни физика, ни
-terminal-критерий, ни действия actor на inference не корректируются экспертом.
+    labels={0:'0 — объезд стены',1:'1 — дополнительное препятствие',
+            2:'2 — сложный поворот с трафиком',3:'3 — открытая площадка'}
+    for map_id,label in labels.items():
+        r=results[f'map{map_id}_final']
+        require_row([label,f"{r['successes']}/{r['episodes']}",str(r['collisions']),
+                     str(r['timeouts']),f"{r['episode_sim_seconds_mean']:.2f} с"],f'final map {map_id}')
+    for name,label in [('map0_base','За приближение к цели по прямой'),
+                       ('map0_shaped500','За продвижение по маршруту и подходящую скорость')]:
+        r=results[name]
+        require_row([label,f"{r['successes']}/{r['episodes']}",str(r['collisions']),str(r['timeouts'])],name)
 
-| Кандидат / snapshot | Dev парковки | Collision | Timeout |
-| --- | ---: | ---: | ---: |
-"""
-    for candidate in ['a','b']:
-        for update in [200,600,800]:
-            path=root/f'map2_safe_{candidate}_dev{update}.json'
-            if not path.exists():continue
-            r=json.loads(path.read_text())['results'][0]
-            text+=f'| {candidate} / {update} | {r["successes"]}/{r["episodes"]} | {r["collisions"]} | {r["timeouts"]} |\n'
-    text+="""
-Для B600 отдельно изменена только частота применения тех же весов. Действие
-раз в6 физических шагов даёт509/512 на dev, раз в3 —511/512, каждый шаг —512/512.
-Таким образом, одной поправки reward оказалось мало: обратная связь5 Гц
-запаздывала на тесном повороте. Финальный экспорт содержит те же веса B600 и
-явное `inference_repeat=1` (30 Гц); обучение шло с `repeat=6` (5 Гц).
-Это изменение частоты исполнения обученной политики, не safety override.
-Выбран snapshot600, а не последний800; критерий выбора — dev, не новый тест.
-Старые128 случаев и8 endpoint cases также пройдены полностью до открытия нового теста.
+    for update in [600,800]:
+        r=json.loads((root/f'artifacts/map2_safe_b_dev{update}.json').read_text(encoding="utf-8"))['results'][0]
+        require_row([f'После {update} обновлений дообучения',f"{r['successes']}/{r['episodes']}",
+                     str(r['collisions']),str(r['timeouts'])],f'checkpoint selection {update}')
+    r6=json.loads((root/'artifacts/map2_safe_b_dev600.json').read_text(encoding="utf-8"))['results'][0]
+    frequency={6:r6}
+    frequency.update({r['evaluation_repeat']:r for r in json.loads((root/'artifacts/map2_repeat_ablation_dev.json').read_text(encoding="utf-8"))['results']})
+    for repeat,hz,seconds in [(6,5,'0.20 секунды'),(3,10,'0.10 секунды'),(1,30,'0.033 секунды')]:
+        r=frequency[repeat]
+        require_row([f'{hz} решений в секунду',seconds,f"{r['successes']}/{r['episodes']}",
+                     str(r['collisions']),str(r['timeouts'])],f'control {hz}Hz')
 
-Свежий набор512 стартов (seeds50000–50511) был зафиксирован в протоколе до выбора
-модели и до его просмотра. Его результаты:
+    ci=json.loads((root/'artifacts/ci_results.json').read_text(encoding="utf-8"))
+    assert ci['passed']
+    for job in ci['jobs']:
+        label='Ubuntu 24.04' if job['os']=='ubuntu-24.04' else 'Windows Server 2022'
+        require_row([label,f"{job['tests']}/{job['tests']}",f"{job['map2_parked']}/{job['map2_cases']} парковок",
+                     f"{job['endpoint_parked']}/{job['endpoint_cases']} парковок",'Записано и декодировано'],label)
 
-| Frozen вариант | Парковки | Collision | Timeout | Минимальный зазор |
-| --- | ---: | ---: | ---: | ---: |
-"""
-    for name in ['map2_before_safety_fresh','map2_final','map2_stochastic']:
-        r=lookup[name]
-        text+=f'| {name} | {r["successes"]}/{r["episodes"]} | {r["collisions"]} | {r["timeouts"]} | {r["min_clearance"]:.3f} |\n'
-    text+="""
-Дообучение имеет дополнительный бюджет, а reward/частота менялись совместно;
-всю разницу с исходной моделью нельзя приписать одному коэффициенту. Частотная
-абляция внутри B600 изолирована, но выполнена на dev. Новый тест даёт ограниченную
-эмпирическую проверку; ноль столкновений не означает доказанную безопасность
-на всех возможных стартах. Начальные позиции/цель фиксированы, меняются курс,
-начальная скорость, темп и фаза трафика. Это не тест неизвестных карт.
-
-"""
-    return text
-
-
-def main():
-    root = Path("artifacts")
-    results = json.loads((root/"evaluation/summary.json").read_text())["results"]
-    lookup = {r["name"]: r for r in results}
-    bench = json.loads((root/"benchmark.json").read_text())
-    demo = json.loads((root/"demo.json").read_text())
-    params, _ = load_checkpoint(root/"ppo_v2_map3_seed0/checkpoint_1000.npz")
-    parameter_count = sum(x.size for x in jax.tree.leaves(params))
-    tests = (root/"tests.txt").read_text().strip().splitlines()[-1]
-    text = """# Assignment 2 — обучение робо-такси с PPO
-
-**Автор:** Карим Хабибрахманов / Karim Khabibrakhmanov  
-**Курс:** [F26] Introduction to Adaptive and Efficient Machine Learning, Innopolis  
-**Измерения:** 1–2 ноября 2026, macOS arm64, Python 3.12.15, JAX 0.6.2 CPU
-
-## Результат и постановка
-
-Задача — обучить робо-такси добираться до цели и останавливаться, используя
-RL. Ниже отделены обучающая статистика, проверка замороженных моделей на новых
-начальных условиях и перенос между картами. Используются отдельные политики
-для четырёх фиксированных карт. На map1 применён перенос весов, подробно ниже.
-Карты0–2 взяты из выданной заготовки, map3 добавлена в A1 как отдельный сценарий.
-
-Основа — опубликованная A1 на коммите
-[`9f015e2`](https://github.com/Karimkhab/adaptive-and-efficient-ml/commit/9f015e2cbadbfb24ea54a894d8db3e4b552c0554).
-Копия физики в `src/env/` не изменена: kinematic bicycle, продольное сопротивление,
-ускорение/тормоз и угол руля, 30 физических шагов/с, радиус объекта 1, клетка 5.
-Предел скорости 5; заднего хода и бокового скольжения нет. Трафик кинематический,
-с разворотами перед препятствиями. Успех требует расстояния ≤1 и скорости
-≤0.001 без столкновения. Скорость не обнуляется специальным кодом: модель
-должна выбрать торможение обычным действием. Лимит — 3000 шагов / 100 с.
-
-Перед обучением повторно проверены **41 тест и 32/32 сценария A1**. Все 43 записи
-SHA-256 manifest сошлись; Git blob `robotaxi.py` совпал с удалённым коммитом.
-[Успешный Linux/Windows CI A1](https://github.com/Karimkhab/adaptive-and-efficient-ml/actions/runs/41313584149)
-подтверждён через API. Это проверки среды и эвристического демо, не оценка PPO.
-Сохранённые доказательства находятся в `artifacts/a1_audit/`.
-
-## Что видит модель
-
-Наблюдение v2: **70 float32** — нормированная скорость (1), локальный вектор
-цели (2), локальное направление навигационного маршрута (2), расстояние до
-маршрута (1), дальности 32 лучей и 32 радиальные скорости сближения. Поле зрения
-π, дальность 12. Перед MLP компоненты вектора цели умножаются на 20, затем
-все признаки ограничиваются диапазоном [-5,5]. Это фиксированное масштабирование,
-оно одинаково при обучении и inference; статистики теста не используются.
-
-Вход — наблюдение с датчиками и навигационной подсказкой среды, а не изображение.
-Навигационная подсказка уже есть в A1 и использует статическую карту.
-Actor и critic не получают `TaxiState`, полные координаты/скорости всех объектов,
-экспертные действия или прогноз трафика. Единственный интерфейс inference
-`Policy(observation_vector)` возвращает пару в [-1,1]. Эвристический контроллер
-A1 сохранён для аудита, но не вызывается при сборе PPO-данных или управлении
-обученным агентом. Обучения по экспертным траекториям здесь нет.
-
-## PPO и обработка эпизодов
-
-Actor и critic — отдельные MLP 64×64 с tanh. Actor выдаёт среднее двухмерной
-Normal и обучаемый log standard deviation; действие — tanh от выборки Normal.
-Log probability учитывает Jacobian этого преобразования. При оценке deterministic
-используется tanh среднего, при stochastic — выборка из обученного распределения.
-Общее число обучаемых параметров: PARAMETER_COUNT.
-
-Один rollout: 32 среды ×128 решений =4096 переходов. При обучении действие удерживается
-6 физических шагов (0.2 с); при done повтор прекращает приносить награду и
-менять состояние. Вознаграждения физических шагов суммируются, для обучения
-масштабируются на 0.05. В отчёте return всегда без масштабирования.
-В `training.csv` поля reward/episode return относятся к обучающей награде с
-добавками; численные таблицы качества ниже используют raw return из evaluation.
-В финальном inference map2 решение обновляется каждый физический шаг (30 Гц),
-у остальных моделей — каждые шесть шагов (5 Гц). `repeat=6` в metadata означает
-частоту обучения, `inference_repeat=1` — частоту замкнутого управления map2.
-Фильтр или эксперт не подменяют действия обученного actor.
-
-Для оценки преимущества используется GAE: delta = r + gamma·V(next)·(1-terminated)
-−V(current), A = delta + gamma·lambda·(1-done)·A(next). gamma=0.99 на решение,
-lambda=0.95. Collision/goal — истинное завершение, там bootstrap нулевой.
-Time limit — truncated: bootstrap берётся по последнему наблюдению **до reset**,
-но цепочка GAE через reset всё равно обрывается. Так новый эпизод не подменяет
-оценку последнего состояния старого.
-
-Обновление PPO минимизирует отрицательный clipped surrogate с clip=0.2,
-половину critic loss и exploration term. Преимущества нормируются по rollout.
-Critic loss — половина MSE к GAE-return; его коэффициент в общем loss 0.5.
-Adam: learning rate 3e-4, epsilon 1e-5; 4 epochs ×4 minibatches по 1024,
-global gradient norm clipping 0.5. Exploration coefficient 0.001 умножается
-на энтропию **латентной Normal** — это proxy, а не энтропия после tanh.
-Value clipping, replay buffer, imitation learning и safety override не используются.
-
-## Награда и эксперименты
-
-Исходная награда A1 за физический шаг: уменьшение евклидова расстояния до цели
-−0.1·dt +100 за парковку −100 за collision. Baseline PPO обучается только на ней.
-Во втором варианте евклидов прогресс заменён прогрессом вдоль фиксированного
-начального маршрута. Потенциал равен минус сумме оставшейся длины ломаной и
-расстояния до неё; используется разность потенциалов. Дополнительно вычитается
-`0.1 * (speed - desired_speed)^2 * executed_seconds`, где desired speed =
-`min(4, sqrt(3 * max(goal_distance - 0.3, 0)))`. Это плотная обучающая подсказка
-для движения и торможения. Collision/goal/time не меняются. Поскольку в разности
-потенциалов нет gamma, сохранение оптимальной политики discounted MDP не утверждается.
-Все frozen evaluation, видео и сравнения return используют **исходную** награду.
-
-Сравнение ниже меняет сразу маршрутную и скоростную добавки. Оно не позволяет
-приписать эффект одной из них. Бюджет пары одинаков: seed0, 500 PPO updates,
-2 048 000 решений, одна и та же версия среды и распределение reset.
-
-| Карта | Обучающая награда | Парковки /128 | Collision | Timeout | Raw return |
-| --- | --- | ---: | ---: | ---: | ---: |
-""".replace("PARAMETER_COUNT", str(parameter_count))
-    for map_id in [0,3]:
-        for kind in ["base", "shaped500"]:
-            r=lookup[f"map{map_id}_{kind}"]
-            text += f'| {map_id} | {kind} | {r["successes"]}/{r["episodes"]} | {r["collisions"]} | {r["timeouts"]} | {r["return_mean"]:.2f} |\n'
-    text += """
-На map1 запуск с нуля не дал устойчивого решения. Поэтому отдельно проверен
-перенос PPO-весов с map0 после 500 updates и ещё 1000 updates на map1. Это
-дополнительный бюджет/предобучение, а не честная пара с тем же числом данных.
-Исходный неудачный запуск и его frozen результат сохранены. Данные теста не
-использовались для выбора: решение о переносе принято по обучающему журналу,
-промежуточные проверки разработки — reset seeds 10000–10063.
-
-| Запуск | Updates | Решения | Реальные физические переходы | Цикл обучения, с |
-| --- | ---: | ---: | ---: | ---: |
-"""
-    for folder in sorted(root.glob("ppo_v2_*")):
-        if not (folder/"training.csv").exists(): continue
-        rows=list(csv.DictReader((folder/"training.csv").open()))
-        r=rows[-1]
-        text += f'| {folder.name} | {r["update"]} | {int(r["decisions"]):,} | {int(r["physics_steps"]):,} | {float(r["elapsed_seconds"]):.1f} |\n'
-    text += """
-Время — wall-clock цикла collect/update с его JIT, без установки, импортов и
-создания среды/сети. Некоторые запуски шли параллельно, поэтому по этой колонке
-нельзя сравнивать вычислительную эффективность наград. Для неё есть отдельный
-бенчмарк ниже. Checkpoints — веса для inference; точный restart с состоянием
-Adam/RNG/параллельных сред не реализован. Полное повторение идёт с начала.
-
-![Реальные обучающие кривые](artifacts/figures/learning.png)
-
-## Замороженная оценка
-
-Основная проверка карт0/1/3: по128 reset seeds20000–20127. Для доработанной map2
-используются512 новых seeds50000–50511, отложенных до выбора модели/частоты управления.
-Прежние seeds20000–20127 для map2 теперь регрессионные, не независимый тест. Reset
-меняет heading равномерно в ±10°, начальную скорость [0,0.5], множитель скорости
-трафика [0.8,1.2] и его фазу на 0–30 физических шагов. Позиция/цель/карта
-фиксированы. Seed-списки совпадают у сравниваемых моделей. Это независимые
-от обучения начальные условия в том же распределении, **не неизвестные карты**.
-
-Каждый эпизод доводится до goal/collision/time limit без reset внутри оценки.
-Проверяется, что исходы дают ровно N, успешные скорости/расстояния соблюдают
-критерий, состояния конечны, а raw return совпадает с аналитической суммой
-прогресса, времени и terminal bonus/penalty. Сохранены исходы и траектории
-всех случаев, включая неудачи. Wilson 95% ниже описывает вариативность reset
-для данного checkpoint; неопределённость обучения он не покрывает.
-
-| Карта | Парковки | Collision | Timeout | Wilson 95% | Raw return mean | Время симуляции mean, с |
-| --- | ---: | ---: | ---: | --- | ---: | ---: |
-"""
     for map_id in range(4):
-        r=lookup[f"map{map_id}_final"]
-        text += f'| {map_id} | {r["successes"]}/{r["episodes"]} | {r["collisions"]} | {r["timeouts"]} | {wilson(r["successes"],r["episodes"])} | {r["return_mean"]:.2f} | {r["episode_sim_seconds_mean"]:.2f} |\n'
-    text += """
-Дополнительные срезы: stochastic actions, восемь вариантов A1 на карту, random
-uniform actions, необученная сеть и zero-shot перенос модели map3. Варианты A1
-уже использовались при разработке самой среды; их нельзя считать независимой
-оценкой A1. Здесь они служат проверкой RL на явных граничных условиях.
-
-| Срез | Парковки | Collision | Timeout |
-| --- | ---: | ---: | ---: |
-"""
-    for r in results:
-        if r["name"].endswith(("stochastic","variants","untrained","random")) or r["name"].startswith("zero_shot") or r["name"]=="map1_scratch":
-            text += f'| {r["name"]} | {r["successes"]}/{r["episodes"]} | {r["collisions"]} | {r["timeouts"]} |\n'
-    text += """
-Чувствительность к обучающему seed проверена на map3 при одинаковых 500 updates:
-
-| Seed | Парковки /128 | Collision | Timeout |
-| --- | ---: | ---: | ---: |
-"""
-    for seed in range(3):
-        r=lookup["map3_shaped500" if seed==0 else f"map3_shaped_seed{seed}"]
-        text += f'| {seed} | {r["successes"]}/{r["episodes"]} | {r["collisions"]} | {r["timeouts"]} |\n'
-    text += """
-Списки reset одинаковы: 384 результата трёх моделей не трактуются как 384
-независимых новых мира. Для остальных карт нет многосидовых реплик одинаковой
-постановки; два safety-кандидата map2 различаются настройками и такими репликами
-не являются. Обобщать на произвольную инициализацию и любую карту нельзя.
-Все срезы показаны, включая проигрыши; поправки на множество гипотез не делались,
-поэтому вторичные сравнения описательные. Гипотеза о хорошем универсальном
-zero-shot агенте проверяется отдельно и не подменяет результат по своим картам.
-
-![Frozen evaluation](artifacts/figures/evaluation.png)
-![Все траектории финальной оценки](artifacts/figures/trajectories.png)
-
-## Вычислительные оптимизации
-
-`vmap` ведёт параллельные среды одной карты; `lax.scan` собирает rollout,
-повтор действий, обратный GAE и epochs/minibatches. `jit` компилирует целые
-фрагменты; во время rollout нет Python-проверок на каждом физическом шаге и
-рендеринга. Сеть мала, данные float32 и остаются в JAX. Разные карты обучаются
-раздельно, поскольку формы массивов препятствий различаются. Action repeat
-сокращает частоту решений, но меняет задачу управления; это не эквивалентный
-бенчмарк ускорения. Реальное число физических переходов учитывает ранние done.
-
-Отдельный CPU-бенчмарк: 16 одинаковых сред ×64 шага, repeat=1 —1024 перехода.
-Одинаковые действия/начальные состояния, конечные состояния сверены до 2e-5.
-Каждый вариант прогрет; пять повторов, медиана; `block_until_ready` завершает
-измеряемую работу до остановки таймера. Cold включает компиляцию и исполнение,
-а не чистое время компилятора. Это изолированный workload, не скорость полного PPO.
-
-| Вариант | Cold, с | Warm median, с | Физических переходов/с |
-| --- | ---: | ---: | ---: |
-"""
-    for name,r in bench["methods"].items():
-        text += f'| {name} | {r["cold_seconds_including_compile"]:.4f} | {r["warm_median_seconds"]:.5f} | {r["physics_transitions_per_second"]:,.0f} |\n'
-    serial=bench["methods"]["python_serial_jit_step"]["warm_median_seconds"]
-    scan=bench["methods"]["jit_scan_vmap"]["warm_median_seconds"]
-    text += f'\nВ этом workload объединённый `jit+scan+vmap` быстрее serial Python-loop с JIT-step в **{serial/scan:.2f} раза**. Сам по себе vmap не объявляется гарантией ускорения: в таблице показан фактический результат каждого варианта.\n'
-    text += """
-## Трудности, решения и пределы
-
-Первый локальный пилот оказался на прежней среде с 38 признаками, клеткой 3 и
-успехом при проезде через цель. После обновления A1 его результаты выведены из
-итогового комплекта: обучение полностью повторено на контракте v2 с парковкой.
-Иначе хорошие числа отвечали бы другой задаче. Старые результаты не используются
-как baseline новой среды.
-
-Вторая трудность — reward и exploration около стены/при торможении. Проверены
-исходная и более плотная награда при одинаковом бюджете, а не просто выбран
-удачный rollout. На map1 понадобился перенос весов с освоенной карты; его
-дополнительные данные и неудача scratch явно сохранены. На сложных сценах и
-при stochastic действиях результат ограничен показанной таблицей.
-
-Третья — отличить timeout от истинного terminal и не использовать начальное
-наблюдение нового эпизода для bootstrap. Это проверено тестами GAE на вручную
-посчитанных примерах, смешанными пакетными завершениями и raw/macro эквивалентностью.
-Проверка градиентов подтверждает конечные ненулевые значения и реальное обновление
-actor. Checkpoint roundtrip сверяется точно; загрузчик отвергает старый контракт.
-
-Наблюдение не делает весь мир полностью наблюдаемым: у датчиков ограничены поле
-зрения/дальность. Успех на четырёх известных картах не доказывает универсальную
-безопасность. В A1 есть регрессионный сценарий с зазором около 0.0067; утверждения
-об устойчивости этой геометрии к произвольному шуму не делаются. Оптимальность
-политики не установлена и по сохранённым условиям A2 не требуется.
-
-## Проверки и соответствие условиям
-
-""" + f'Результат текущих тестов: **{tests}**. Проверка зависимостей — `pip check`.\n\n'
-    text += """| Требование | Реализация / доказательство | Статус |
-| --- | --- | --- |
-| RL в своей среде, цель | PPO `src/train.py`, 4 карты, parking/collision/timeout по всем эпизодам | Проверено локально |
-| Понимание RL и алгоритма | Постановка, actor/critic, GAE, clipping, reward и ограничения выше | Описано |
-| Вычислительные оптимизации | jit/vmap/scan, float32, repeat; равная работа и warm/cold timing | Измерено |
-| Код и checkpoint | `src/`, `.npz` + `.json` для каждой модели, configs/CSV | На месте |
-| Видео | `artifacts/demo.mp4`, реальные neural rollouts, pixel renderer A1 | Записано |
-| Отчёт с автором и трудностями | Этот документ, фактические эксперименты и ограничения | На месте |
-| Воспроизведение | README: установка, inference, evaluation, обучение с нуля | Команды приведены |
-
-### Аудит методологии
-
-| Критерий | Доказательство | Вердикт |
-| --- | --- | --- |
-| Арифметика и знаменатели | Каждый эпизод имеет ровно один исход; return восстановлен из расстояния/времени/terminal; полный JSON доступен | Проверено |
-| Одинаковость условий | Reward-пары: seed0, 500 updates, 32×128 решений, одна среда v2 и одни test reset seeds | Проверено для пары; transfer отдельно |
-| Шум оценки | Wilson для N=128; три training seeds только на map3 | Оговорка: не все источники неопределённости |
-| Защитные срезы | Stochastic, 32 endpoint cases, baseline и zero-shot показаны полностью | Проверено; неудачи видны |
-| Множественные сравнения | Все 34 named результата сохранены; вторичные сравнения описательные | Оговорка: нет multiple-testing correction |
-| Train/dev/test | Training RNG seeds0/1/2; dev10000–10063; final20000–20127; карты при обучении известны | Разделено по reset, не по карте |
-| Гипотеза → данные → вывод | Reward-пара, scratch map1 и PPO-transfer имеют отдельные configs, checkpoints, CSV и frozen исходы | Прослеживается |
-| Причинность | Пара меняет пакет route+parking; результат transfer не приписан одному изменению reward | Ограничена именно проверенным пакетом |
-| Альтернативы | Есть random/untrained/base, разные seeds map3; для сложных карт нет много-seed вывода | Оговорка: ограниченный бюджет реплик |
-| Выборка | По128 стартов карт0/1/3 и512 стартов map2 на известных картах; 8 endpoint cases отдельно | Масштаб вывода ограничен |
-| Код доступен | PPO, sampler, reward, inference, evaluation, benchmark и report generator в src/ | На месте |
-| Применимость | Готовые checkpoints и воспроизведение; перенос map1 указан как отдельная стратегия | Соответствует A2 |
-| Формулы и граничные случаи | Ручные GAE-примеры, terminal/timeout, action repeat, повреждённый checkpoint, старый контракт | Покрыто тестами |
-| Join / уникальность | Join нет; имена 34 результатов уникальны, N исходов на N reset | Проверено генератором |
-| Повторный запуск | Новый training output обязателен; evaluation воспроизводит фиксированные checkpoints | Данные обучения защищены |
-| Контракт | Физика byte-identical A1; actor принимает70 наблюдений; терминал требует остановки | Проверено |
-
-Методологическая проверка: формулы и знаменатели восстановлены из кода/JSON;
-в парах reward одинаковы seed/бюджет/среда; transfer имеет другой бюджет и так
-подписан; validation отделена от frozen test; все защитные срезы и неудачи
-сохранены. Join таблиц не применяется: один named результат на эксперимент,
-один исход на reset. Архив и manifest отделены от venv/кешей. Полной числовой
-рубрики на 25 баллов в сохранённых условиях нет, поэтому полный балл не обещается.
-
-Проверена macOS arm64. A1 имеет успешный Linux/Windows CI; это не утверждение
-о запуске всего PPO-пакета A2 на этих ОС. Команды Windows и локально подготовленный
-workflow позволяют повторить проверку; публикация/CI A2 отдельно не выполнялись.
-Для зафиксированных зависимостей A2 успешно выполнен pip dry-run с бинарными
-пакетами Python3.12 для Windows x86-64 и Linux x86-64; это проверка доступности
-пакетов, не их исполнения. JSON и журналы сохранены в artifacts/.
-Сообщение преподавателю и изменение удалённой Submission не выполнялись.
-
-## Воспроизведение и источники
-
-Пошаговые команды — в [README](README.md). Коротко: Python3.12 → `pip install -r
-requirements-lock.txt` → `pytest` → `evaluation_suite.py` → `benchmark.py` →
-`charts.py` → `make_rl_video.py` → `report.py`. Для обучения заново — `train_all.py`
-в новый каталог; для одного эксперимента — `train.py`. Checkpoints хранят weights
-и configuration; побитовый restart Adam/состояний среды не заявлен.
-
-- Условия: Assignments.pdf преподавателя, 30.09.2026, [сообщение курса](https://t.me/c/3789089672/80).
-  Состав требований сохранён в контексте проекта; PDF не содержит подробной
-  разбалловки внутри A2. JAX рекомендован, PyTorch разрешён; PPO — допустимый выбор.
-- Среда A1: [проверенный коммит](https://github.com/Karimkhab/adaptive-and-efficient-ml/tree/9f015e2cbadbfb24ea54a894d8db3e4b552c0554/assignment-1).
-- Заготовка курса: [InnoRL/IAEML-assignment](https://github.com/InnoRL/IAEML-assignment).
-- Schulman et al., [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347).
-- Schulman et al., [Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438).
-- JAX: [JIT](https://docs.jax.dev/en/latest/201/jit.html), [vmap/grad](https://docs.jax.dev/en/latest/101/transformations.html),
-  [измерение производительности](https://docs.jax.dev/en/latest/201/profiling.html).
-
-Использована AI-помощь в коде и анализе. Раздел о трудностях описывает реальные
-проверки и изменения; личные мысли или несуществующий опыт студента не сочинялись.
-"""
-    # No stale measurements may be silently embedded in the report.
-    assert all(r["observation_version"]==2 for r in results)
-    assert len({r["name"] for r in results})==len(results)
-    if 'map2_before_safety_fresh' in lookup:
-        text=text.replace('## Вычислительные оптимизации',map2_safety_report(root,lookup)+'## Вычислительные оптимизации')
-        text=text.replace('## Трудности, решения и пределы','Численная проверка raw return учитывает накопление float32-ошибок: у почти\nнеподвижной необученной сети за3000 шагов наблюдалось расхождение0.023. Допуск\nконтрольной суммы ограничен четырьмя ULP расстояния на выполненный шаг. Это\nне меняет награды или строгие критерии парковки/столкновения; для финальной\nmap2 ошибка реконструкции меньше0.0003. Расчёт сохранён в return_precision.json.\n\n## Трудности, решения и пределы')
-    text=text.replace('Все 34 named результата',f'Все {len(results)} named результатов')
-    text=text.replace('имена 34 результатов',f'имена {len(results)} результатов')
-    text=text.replace('dev10000–10063; final20000–20127','dev10000–10511 для map2; final20000–20127 (карты0/1/3) и50000–50511 (map2)')
-    ci_path=root/'ci_results.json'
-    if ci_path.exists():
-        ci=json.loads(ci_path.read_text())
-        assert ci['passed'] and len(ci['jobs'])==2 and all(j['conclusion']=='success' for j in ci['jobs'])
-        text=text.replace('Проверена macOS arm64. A1 имеет успешный Linux/Windows CI; это не утверждение\nо запуске всего PPO-пакета A2 на этих ОС. Команды Windows и локально подготовленный\nworkflow позволяют повторить проверку; публикация/CI A2 отдельно не выполнялись.',
-            'Проверены macOS arm64 и настоящий нативный CI A2 на Ubuntu24.04/Windows2022.\n'
-            f"[CI-прогон]({ci['url']}) для кода `{ci['head_sha']}` успешен на обеих ОС.\n"
-            'На каждой ОС выполнены pytest, отдельный update обучения, quality gate готовых моделей,\nнабор всех срезов с уменьшенным CI-бюджетом и запись/декодирование видео.\nДоказательства — в artifacts/ci_results.json и ci_native/.\nОконный интерфейс Linux/Windows вручную не проверялся.')
-        text=text.replace('Сообщение преподавателю и изменение удалённой Submission не выполнялись.',
-            'Публикация main/Submission поручена пользователем2 ноября. Сообщение преподавателю не отправлялось.')
-        text+='\n## Подтверждённые артефакты нативного CI A2\n\n| ОС | Python | Тесты | Map2 parking | Endpoints | Обучение | Видео | Срезы / эпизоды |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n'
-        for job in ci['jobs']:
-            text+=f"| {job['os']} | {job['runtime']['python']} | {job['tests']}/{job['tests']}, без пропусков | {job['map2_parked']}/{job['map2_cases']},0 collision | {job['endpoint_parked']}/{job['endpoint_cases']} | 1 update, actor изменился | {job['video']['parked_episodes']} парковки; 3 декодированных кадра | {job['evaluation_slices']} / {job['evaluation_episodes']} |\n"
-        text+='\nПервый запуск не исполнял runners из-за YAML-экранирования `:all:`. Ошибка\nисправлена отдельным коммитом до успешного прогона; её история сохранена в ci_results.json.\n'
-    text=re.sub(r'(?<=[А-Яа-я])(?=\d)', ' ',text)
-    text=re.sub(r'(?<=\d)(?=[А-Яа-я])', ' ',text)
-    text=re.sub(r'(?<=seeds)(?=\d)', ' ',text)
-    Path("REPORT.md").write_text(text)
+        r=results[f'map{map_id}_stochastic']
+        require_row([str(map_id),f"{r['successes']}/{r['episodes']}",str(r['collisions']),str(r['timeouts'])],f'stochastic map {map_id}')
+    assert text.count('<details>')==text.count('</details>')==text.count('<summary>')==text.count('</summary>')
+    assert '\\n' not in text,'Literal newline escape in prose'
+    for link in re.findall(r'\]\(([^)]+)\)',text):
+        if '://' not in link and not link.startswith('#'):
+            target=root/unquote(link.split('#')[0])
+            assert target.exists(),target
+    assert 'Автоматической остановки по качеству в реализации нет' in text
+    assert results['map2_final']['episodes']==512 and results['map2_final']['seed_start']==50000
+    assert len(data)==35 and sum(r['episodes'] for r in data)==4644
+    return {'status':'passed','checked_rows':len(checked),'checks':checked,
+            'report':'REPORT.md','text_modified':False,
+            'scope':'saved measurements, local links and disclosure of manual stopping budgets'}
 
 
-if __name__ == "__main__":
-    main()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--report',type=Path,default=Path('REPORT.md'))
+    args=parser.parse_args()
+    print(json.dumps(verify(args.report),ensure_ascii=False,indent=2))
