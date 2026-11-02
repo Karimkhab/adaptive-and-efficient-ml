@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install --only-binary=:all: -r requirements-lock.txt
+      - run: 'python -m pip install --only-binary=:all: -r requirements-lock.txt'
       - run: python -m pip check
       - run: python -m pytest -q --junitxml=artifacts/ci-tests.xml
       - run: python src/train.py --map 3 --randomize --route-reward --parking-reward --envs 4 --rollout 16 --max-steps 48 --updates 1 --epochs 1 --minibatches 1 --output artifacts/ci-training
