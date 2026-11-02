@@ -1,0 +1,2 @@
+update,decisions,physics_steps,episodes,successes,collisions,timeouts,episode_return_mean,reward_sum,loss,actor_loss,critic_loss,latent_entropy,approx_kl,clip_fraction,collect_seconds,update_seconds,elapsed_seconds
+1,64,384,8,0,0,8,-2.2522411346435547,-18.01793098449707,0.0006658085039816797,-3.725290298461914e-08,0.005007445812225342,1.8378770351409912,0.0,0.0,0.7232552920031594,0.3011135829874547,1.024785833011265

@@ -1,0 +1,52 @@
+{
+  "map": 0,
+  "policy": "trained",
+  "stochastic": false,
+  "episodes": 1,
+  "seed_start": 20000,
+  "reset_distribution": {
+    "heading_radians": [
+      -0.0,
+      0.0
+    ],
+    "other_state": "canonical"
+  },
+  "randomize_all": false,
+  "observation_version": 2,
+  "variant_suite": false,
+  "training_repeat": 6,
+  "control_repeat": 6,
+  "control_frequency_hz": 5.0,
+  "successes": 1,
+  "collisions": 0,
+  "timeouts": 0,
+  "success_rate": 1.0,
+  "return_mean": 167.2723846435547,
+  "return_std": 0.0,
+  "distance_mean": 0.7009546756744385,
+  "episode_sim_seconds_mean": 20.266666666666666,
+  "min_clearance": 0.4682435989379883,
+  "final_speed_max": 0.0,
+  "raw_return_reconstruction_max_error": 9.562174483335184e-06,
+  "raw_return_reconstruction_max_tolerance": 0.0185546875,
+  "evaluation_seconds_including_compile": 0.4468562080000993,
+  "per_episode": [
+    {
+      "index": 0,
+      "reset_seed": 20000,
+      "variant": null,
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.2723846435547,
+      "final_distance": 0.7009546756744385,
+      "final_speed": 0.0,
+      "physics_steps": 608
+    }
+  ],
+  "name": "map0_canonical",
+  "checkpoint": "artifacts/ppo_v2_map0_seed0/checkpoint_1500.npz",
+  "train_seed": 0,
+  "completed_updates": 1500,
+  "checkpoint_sha256": "712be7bd1be67176f9862a59c887fc2d22b914fe2e48c5a9f77472ba9712342c"
+}

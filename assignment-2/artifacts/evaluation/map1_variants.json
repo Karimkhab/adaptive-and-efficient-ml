@@ -1,0 +1,179 @@
+{
+  "map": 1,
+  "policy": "trained",
+  "stochastic": false,
+  "episodes": 8,
+  "seed_start": 20000,
+  "reset_distribution": {
+    "fixed_variants": [
+      {
+        "name": "baseline",
+        "settings": {}
+      },
+      {
+        "name": "heading_minus_10deg",
+        "settings": {
+          "heading": -0.17453292519943295
+        }
+      },
+      {
+        "name": "heading_plus_10deg",
+        "settings": {
+          "heading": 0.17453292519943295
+        }
+      },
+      {
+        "name": "initial_speed_0.5",
+        "settings": {
+          "speed": 0.5
+        }
+      },
+      {
+        "name": "traffic_speed_0.8",
+        "settings": {
+          "traffic_scale": 0.8
+        }
+      },
+      {
+        "name": "traffic_speed_1.2",
+        "settings": {
+          "traffic_scale": 1.2
+        }
+      },
+      {
+        "name": "traffic_phase_0.5s",
+        "settings": {
+          "phase_seconds": 0.5
+        }
+      },
+      {
+        "name": "traffic_phase_1.0s",
+        "settings": {
+          "phase_seconds": 1.0
+        }
+      }
+    ]
+  },
+  "randomize_all": false,
+  "observation_version": 2,
+  "variant_suite": true,
+  "training_repeat": 6,
+  "control_repeat": 6,
+  "control_frequency_hz": 5.0,
+  "successes": 8,
+  "collisions": 0,
+  "timeouts": 0,
+  "success_rate": 1.0,
+  "return_mean": 167.7608642578125,
+  "return_std": 0.15863028168678284,
+  "distance_mean": 0.22288112342357635,
+  "episode_sim_seconds_mean": 20.1625,
+  "min_clearance": 0.13665294647216797,
+  "final_speed_max": 0.0,
+  "raw_return_reconstruction_max_error": 2.0955403641664816e-05,
+  "raw_return_reconstruction_max_tolerance": 0.0185546875,
+  "evaluation_seconds_including_compile": 0.7154288750025444,
+  "per_episode": [
+    {
+      "index": 0,
+      "reset_seed": null,
+      "variant": "baseline",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.93617248535156,
+      "final_distance": 0.0404837429523468,
+      "final_speed": 0.0,
+      "physics_steps": 607
+    },
+    {
+      "index": 1,
+      "reset_seed": null,
+      "variant": "heading_minus_10deg",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.68466186523438,
+      "final_distance": 0.29866936802864075,
+      "final_speed": 0.0,
+      "physics_steps": 605
+    },
+    {
+      "index": 2,
+      "reset_seed": null,
+      "variant": "heading_plus_10deg",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.50704956054688,
+      "final_distance": 0.47959956526756287,
+      "final_speed": 0.0,
+      "physics_steps": 604
+    },
+    {
+      "index": 3,
+      "reset_seed": null,
+      "variant": "initial_speed_0.5",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.7510986328125,
+      "final_distance": 0.2522242069244385,
+      "final_speed": 0.0,
+      "physics_steps": 599
+    },
+    {
+      "index": 4,
+      "reset_seed": null,
+      "variant": "traffic_speed_0.8",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.57046508789062,
+      "final_distance": 0.41285911202430725,
+      "final_speed": 0.0,
+      "physics_steps": 605
+    },
+    {
+      "index": 5,
+      "reset_seed": null,
+      "variant": "traffic_speed_1.2",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.75796508789062,
+      "final_distance": 0.22868771851062775,
+      "final_speed": 0.0,
+      "physics_steps": 604
+    },
+    {
+      "index": 6,
+      "reset_seed": null,
+      "variant": "traffic_phase_0.5s",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.9378662109375,
+      "final_distance": 0.03544783219695091,
+      "final_speed": 0.0,
+      "physics_steps": 608
+    },
+    {
+      "index": 7,
+      "reset_seed": null,
+      "variant": "traffic_phase_1.0s",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.94158935546875,
+      "final_distance": 0.03507736325263977,
+      "final_speed": 0.0,
+      "physics_steps": 607
+    }
+  ],
+  "name": "map1_variants",
+  "checkpoint": "artifacts/ppo_v2_map1_transfer_seed0/checkpoint_1000.npz",
+  "train_seed": 0,
+  "completed_updates": 1000,
+  "checkpoint_sha256": "6c988acd1810f44dc7180f18a8944f4d09a243d3e7cdb8d07f99e308450a0cf8"
+}

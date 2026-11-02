@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "34 named results unique",
+    "3364 episodes partitioned",
+    "checkpoint hashes matched",
+    "parking thresholds checked per successful episode",
+    "fixed variants metadata explicit",
+    "video/canonical agreement",
+    "local Markdown links resolve"
+  ],
+  "status": "passed"
+}

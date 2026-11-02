@@ -1,0 +1,8 @@
+{
+  "observed_untrained_return_check_error": 0.02297401,
+  "max_physics_steps": 3000,
+  "float32_distance_scale": 111.80339887498948,
+  "float32_distance_ulp": 7.62939453125e-06,
+  "conservative_accumulated_4ulp_bound": 0.091552734375,
+  "scope": "Only an independent raw-return consistency check; raw rewards and parking/collision criteria unchanged. Norm subtraction in nested float32 JIT may accumulate ULP differences for near-stationary untrained policy."
+}

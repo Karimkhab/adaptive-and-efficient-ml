@@ -1,0 +1,8 @@
+pygame 2.6.1 (SDL 2.28.4, Python 3.12.15)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+map0_canonical: 1/1 parked; 0 collisions; 0 timeouts
+map1_canonical: 1/1 parked; 0 collisions; 0 timeouts
+map2_canonical: 1/1 parked; 0 collisions; 0 timeouts
+map3_canonical: 1/1 parked; 0 collisions; 0 timeouts
+map2_fresh_randomized: 128/128 parked; 0 collisions; 0 timeouts
+map2_endpoint_variants: 8/8 parked; 0 collisions; 0 timeouts

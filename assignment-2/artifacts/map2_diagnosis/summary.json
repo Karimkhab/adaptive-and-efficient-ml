@@ -1,0 +1,111 @@
+{
+  "purpose": "known failures reused as regression; not held-out test",
+  "checkpoint": "artifacts/ppo_v2_map2_seed0/checkpoint_1600.npz",
+  "cases": [
+    {
+      "case": "regression_seed_20019",
+      "collision_step": 573,
+      "position": [
+        1.9395383596420288,
+        25.220178604125977
+      ],
+      "heading": -1.8422813415527344,
+      "speed": 4.106966018676758,
+      "action": [
+        0.7508625388145447,
+        0.9676743745803833
+      ],
+      "clearance": -0.048004150390625,
+      "obstacle_index": 27,
+      "obstacle_type": "static",
+      "obstacle_position": [
+        0.0,
+        25.0
+      ]
+    },
+    {
+      "case": "regression_seed_20032",
+      "collision_step": 581,
+      "position": [
+        1.9816805124282837,
+        25.157320022583008
+      ],
+      "heading": -1.749536156654358,
+      "speed": 3.5379068851470947,
+      "action": [
+        0.9355635046958923,
+        0.9616238474845886
+      ],
+      "clearance": -0.012084722518920898,
+      "obstacle_index": 27,
+      "obstacle_type": "static",
+      "obstacle_position": [
+        0.0,
+        25.0
+      ]
+    },
+    {
+      "case": "regression_seed_20050",
+      "collision_step": 558,
+      "position": [
+        2.719573497772217,
+        25.60968017578125
+      ],
+      "heading": -2.0107738971710205,
+      "speed": 4.102351188659668,
+      "action": [
+        0.9901542067527771,
+        0.5797838568687439
+      ],
+      "clearance": -0.0003801584243774414,
+      "obstacle_index": 79,
+      "obstacle_type": "moving",
+      "obstacle_position": [
+        4.623981475830078,
+        25.0
+      ]
+    },
+    {
+      "case": "regression_seed_20113",
+      "collision_step": 553,
+      "position": [
+        2.714418411254883,
+        26.257417678833008
+      ],
+      "heading": -2.33042573928833,
+      "speed": 3.7326457500457764,
+      "action": [
+        0.8345113396644592,
+        0.8565470576286316
+      ],
+      "clearance": -0.009416818618774414,
+      "obstacle_index": 79,
+      "obstacle_type": "moving",
+      "obstacle_position": [
+        4.257571697235107,
+        25.0
+      ]
+    },
+    {
+      "case": "heading_plus_10deg",
+      "collision_step": 563,
+      "position": [
+        1.8540501594543457,
+        25.68092918395996
+      ],
+      "heading": -2.020725727081299,
+      "speed": 3.1983730792999268,
+      "action": [
+        0.27971991896629333,
+        0.6733211874961853
+      ],
+      "clearance": -0.02486288547515869,
+      "obstacle_index": 27,
+      "obstacle_type": "static",
+      "obstacle_position": [
+        0.0,
+        25.0
+      ]
+    }
+  ]
+}

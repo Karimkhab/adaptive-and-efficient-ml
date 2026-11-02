@@ -1,0 +1,49 @@
+{
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "jax": "0.6.2",
+  "devices": "[CpuDevice(id=0)]",
+  "map": 3,
+  "envs": 16,
+  "steps": 64,
+  "action_repeat": 1,
+  "transitions_per_trial": 1024,
+  "equal_final_states": true,
+  "methods": {
+    "python_serial_jit_step": {
+      "cold_seconds_including_compile": 0.290108417000738,
+      "warm_seconds": [
+        0.02016091699624667,
+        0.01916295800037915,
+        0.018676249994314276,
+        0.019080582998867612,
+        0.01906158299971139
+      ],
+      "warm_median_seconds": 0.019080582998867612,
+      "physics_transitions_per_second": 53667.12327714368
+    },
+    "python_loop_vmap": {
+      "cold_seconds_including_compile": 0.3115691249986412,
+      "warm_seconds": [
+        0.04093541700422065,
+        0.04050541699689347,
+        0.040173207999032456,
+        0.040231833001598716,
+        0.04011449999961769
+      ],
+      "warm_median_seconds": 0.040231833001598716,
+      "physics_transitions_per_second": 25452.48186825862
+    },
+    "jit_scan_vmap": {
+      "cold_seconds_including_compile": 0.13642662500205915,
+      "warm_seconds": [
+        0.0028153340026619844,
+        0.002934666998044122,
+        0.002880749998439569,
+        0.002888958995754365,
+        0.0028301670026849024
+      ],
+      "warm_median_seconds": 0.002880749998439569,
+      "physics_transitions_per_second": 355462.9872618851
+    }
+  }
+}

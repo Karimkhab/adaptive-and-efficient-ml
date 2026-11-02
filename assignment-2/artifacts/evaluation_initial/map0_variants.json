@@ -1,0 +1,176 @@
+{
+  "map": 0,
+  "policy": "trained",
+  "stochastic": false,
+  "episodes": 8,
+  "seed_start": 20000,
+  "reset_distribution": {
+    "fixed_variants": [
+      {
+        "name": "baseline",
+        "settings": {}
+      },
+      {
+        "name": "heading_minus_10deg",
+        "settings": {
+          "heading": -0.17453292519943295
+        }
+      },
+      {
+        "name": "heading_plus_10deg",
+        "settings": {
+          "heading": 0.17453292519943295
+        }
+      },
+      {
+        "name": "initial_speed_0.5",
+        "settings": {
+          "speed": 0.5
+        }
+      },
+      {
+        "name": "traffic_speed_0.8",
+        "settings": {
+          "traffic_scale": 0.8
+        }
+      },
+      {
+        "name": "traffic_speed_1.2",
+        "settings": {
+          "traffic_scale": 1.2
+        }
+      },
+      {
+        "name": "traffic_phase_0.5s",
+        "settings": {
+          "phase_seconds": 0.5
+        }
+      },
+      {
+        "name": "traffic_phase_1.0s",
+        "settings": {
+          "phase_seconds": 1.0
+        }
+      }
+    ]
+  },
+  "randomize_all": false,
+  "observation_version": 2,
+  "variant_suite": true,
+  "successes": 8,
+  "collisions": 0,
+  "timeouts": 0,
+  "success_rate": 1.0,
+  "return_mean": 167.36241149902344,
+  "return_std": 0.24385656416416168,
+  "distance_mean": 0.6138252019882202,
+  "episode_sim_seconds_mean": 20.2375,
+  "min_clearance": 0.21680402755737305,
+  "final_speed_max": 0.0,
+  "raw_return_reconstruction_max_error": 1.9531250018189894e-05,
+  "evaluation_seconds_including_compile": 0.7503915839988622,
+  "per_episode": [
+    {
+      "index": 0,
+      "reset_seed": null,
+      "variant": "baseline",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.27236938476562,
+      "final_distance": 0.7009544968605042,
+      "final_speed": 0.0,
+      "physics_steps": 608
+    },
+    {
+      "index": 1,
+      "reset_seed": null,
+      "variant": "heading_minus_10deg",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.25938415527344,
+      "final_distance": 0.7206031084060669,
+      "final_speed": 0.0,
+      "physics_steps": 606
+    },
+    {
+      "index": 2,
+      "reset_seed": null,
+      "variant": "heading_plus_10deg",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.11868286132812,
+      "final_distance": 0.8612959980964661,
+      "final_speed": 0.0,
+      "physics_steps": 606
+    },
+    {
+      "index": 3,
+      "reset_seed": null,
+      "variant": "initial_speed_0.5",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.639892578125,
+      "final_distance": 0.3500988483428955,
+      "final_speed": 0.0,
+      "physics_steps": 603
+    },
+    {
+      "index": 4,
+      "reset_seed": null,
+      "variant": "traffic_speed_0.8",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.66848754882812,
+      "final_distance": 0.29485219717025757,
+      "final_speed": 0.0,
+      "physics_steps": 611
+    },
+    {
+      "index": 5,
+      "reset_seed": null,
+      "variant": "traffic_speed_1.2",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.69625854492188,
+      "final_distance": 0.2670835852622986,
+      "final_speed": 0.0,
+      "physics_steps": 611
+    },
+    {
+      "index": 6,
+      "reset_seed": null,
+      "variant": "traffic_phase_0.5s",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.12286376953125,
+      "final_distance": 0.8571138381958008,
+      "final_speed": 0.0,
+      "physics_steps": 606
+    },
+    {
+      "index": 7,
+      "reset_seed": null,
+      "variant": "traffic_phase_1.0s",
+      "success": true,
+      "collision": false,
+      "timeout": false,
+      "return": 167.12139892578125,
+      "final_distance": 0.8585997819900513,
+      "final_speed": 0.0,
+      "physics_steps": 606
+    }
+  ],
+  "name": "map0_variants",
+  "checkpoint": "artifacts/ppo_v2_map0_seed0/checkpoint_1500.npz",
+  "train_seed": 0,
+  "completed_updates": 1500,
+  "checkpoint_sha256": "712be7bd1be67176f9862a59c887fc2d22b914fe2e48c5a9f77472ba9712342c",
+  "metadata_note": "Fixed endpoint scenarios, not random resets; corrected description only, numerical results unchanged."
+}
