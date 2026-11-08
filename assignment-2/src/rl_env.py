@@ -3,7 +3,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 
-from env.robotaxi import RobotaxiEnv
+from env.robotaxi import DEFAULT_HEADING_NOISE, RobotaxiEnv
 
 
 def route_potential(position, path):
@@ -18,21 +18,30 @@ def route_potential(position, path):
                          jnp.maximum(lengths**2, 1e-8), 0., 1.)
     projections = anchors + fractions[:, None] * segments
     distance = jnp.linalg.norm(position - projections, axis=1)
-    nearest = jnp.argmin(distance)
     suffix = jnp.cumsum(lengths[::-1])[::-1]
-    return -(suffix[nearest] - fractions[nearest] * lengths[nearest] + distance[nearest])
+    remaining = suffix - fractions * lengths
+    # Each projection gives a continuous cost. Penalize distant projections
+    # enough to keep a nearby branch from looking like a free shortcut.
+    min_length = jnp.min(jnp.where(lengths > 0, lengths, jnp.inf))
+    detour_weight = jnp.maximum(4., 1. + suffix[0] / min_length)
+    nearest_distance = jnp.min(distance)
+    adjusted = remaining + detour_weight * (distance - nearest_distance)
+    return -(jnp.min(adjusted) + nearest_distance)
 
 
-def make_env(map_id=3, repeat=6, max_steps=3000, heading_noise=0., route_reward=False,
+def make_env(map_id=3, repeat=6, max_steps=3000, heading_noise=None, route_reward=False,
              randomize=False, parking_reward=False, cruise_speed=4., speed_cost=.1,
              clearance_cost=0., clearance_margin=1., clearance_speed=False):
+    if heading_noise is None:
+        heading_noise = DEFAULT_HEADING_NOISE if randomize else 0.
     p, initial = RobotaxiEnv.init_params(jax.random.PRNGKey(0), map_id=map_id, max_steps=max_steps)
 
     def reset(key):
         if randomize:
-            obs, state = RobotaxiEnv.reset(key, p, initial, randomize=True)
+            obs, state = RobotaxiEnv.reset(key, p, initial, randomize=True, heading_noise=heading_noise)
             return state, obs.as_vector()
-        heading = initial.heading + jax.random.uniform(key, (), minval=-heading_noise, maxval=heading_noise)
+        heading = initial.heading + jax.random.uniform(
+            key, (), dtype=jnp.float32, minval=-heading_noise, maxval=heading_noise)
         state = eqx.tree_at(lambda s: (s.heading, s.agent_forward_dir), initial,
                             (heading, jnp.array([jnp.cos(heading), jnp.sin(heading)])))
         return state, RobotaxiEnv.get_observation(state, p).as_vector()
@@ -48,8 +57,10 @@ def make_env(map_id=3, repeat=6, max_steps=3000, heading_noise=0., route_reward=
                     jnp.minimum(clearance, info["clearance"]), steps + active), None
 
         (state, reward, success, collision, timeout, clearance, steps), _ = jax.lax.scan(
-            body, (state, jnp.array(0.), jnp.array(False), jnp.array(False),
-                   jnp.array(False), jnp.array(jnp.inf), jnp.array(0, jnp.int32)), None, length=repeat)
+            body, (state, jnp.array(0., dtype=state.agent_pos.dtype), jnp.array(False),
+                   jnp.array(False), jnp.array(False),
+                   jnp.array(jnp.inf, dtype=state.agent_pos.dtype), jnp.array(0, jnp.int32)),
+            None, length=repeat)
         obs = RobotaxiEnv.get_observation(state, p).as_vector()
         raw_reward = reward
         if route_reward:

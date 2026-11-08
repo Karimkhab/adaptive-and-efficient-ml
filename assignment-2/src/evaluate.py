@@ -76,6 +76,7 @@ def main():
         "python": platform.python_version(), "platform": platform.platform(),
         "jax": jax.__version__, "devices": [str(d) for d in jax.devices()],
         "observation_version": RobotaxiEnv.OBSERVATION_VERSION,
+        "environment_revision": RobotaxiEnv.ENVIRONMENT_REVISION,
         "observation_size": 70,
         "results": results,
     }

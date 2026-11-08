@@ -1,0 +1,23 @@
+{
+  "date": "2026-11-08",
+  "environment_revision": "consistent_geometry_v1",
+  "scope": "Same 32 fixed A1 regression scenarios in each mode",
+  "float32": {
+    "episodes": 32,
+    "parked": 32,
+    "collisions": 0,
+    "timeouts": 0,
+    "min_clearance": 0.03714179992675781,
+    "worst_map": 1,
+    "worst_variant": "heading_minus_10deg"
+  },
+  "float64": {
+    "episodes": 32,
+    "parked": 32,
+    "collisions": 0,
+    "timeouts": 0,
+    "min_clearance": 0.038107201112019595,
+    "worst_map": 2,
+    "worst_variant": "heading_plus_10deg"
+  }
+}

@@ -29,7 +29,7 @@ def vary_initial_state(params, state, *, heading=0., speed=0., traffic_scale=1.,
     angle = state.heading + heading
     state = eqx.tree_at(lambda s: (s.heading, s.agent_forward_dir, s.speed, s.kinematic_obst_velocities),
                         state, (angle, jnp.array([jnp.cos(angle), jnp.sin(angle)]),
-                                jnp.array(speed, dtype=jnp.float32),
+                                jnp.array(speed, dtype=state.speed.dtype),
                                 state.kinematic_obst_velocities * traffic_scale))
     def tick(_, state):
         positions, velocities = move_obstacles(state, params)
@@ -60,6 +60,7 @@ def run_suite(output=Path("artifacts/scenarios.json")):
                 np.savetxt(output.parent / f"failed_map{map_id}_{name}.csv", trace, delimiter=",")
     document = {"purpose": "deterministic development/regression cases, not an independent quality estimate",
                 "observation_version": RobotaxiEnv.OBSERVATION_VERSION,
+                "environment_revision": RobotaxiEnv.ENVIRONMENT_REVISION,
                 "total": len(results), "passed": sum(r["passed"] for r in results), "results": results}
     output.write_text(json.dumps(document, indent=2) + "\n")
     return document

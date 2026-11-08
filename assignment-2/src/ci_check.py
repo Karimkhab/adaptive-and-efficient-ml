@@ -34,8 +34,12 @@ def main():
         rows.append(result)
     path=checkpoint_path(2)
     params,config=load_checkpoint(path)
-    for name,variants in [('map2_fresh_randomized',False),('map2_endpoint_variants',True)]:
-        result,_=evaluate(params,config,2,episodes=args.episodes,seed=args.seed,randomize=True,variants=variants)
+    for name, episodes, seed, variants in [
+        ('map2_fresh_randomized', args.episodes, args.seed, False),
+        ('map2_endpoint_variants', args.episodes, args.seed, True),
+        ('map2_collision_regression', 1, 74537, False),
+    ]:
+        result,_=evaluate(params,config,2,episodes=episodes,seed=seed,randomize=True,variants=variants)
         result.update(name=name,checkpoint=str(path),checkpoint_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
         rows.append(result)
     document={'purpose':'native frozen parking quality gate plus separate one-update training smoke; frozen models never retrained',

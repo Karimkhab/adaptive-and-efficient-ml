@@ -30,6 +30,19 @@ def verify(report):
         r=results[f'map{map_id}_final']
         require_row([label,f"{r['successes']}/{r['episodes']}",str(r['collisions']),
                      str(r['timeouts']),f"{r['episode_sim_seconds_mean']:.2f} с"],f'final map {map_id}')
+    current = json.loads((root/'artifacts/recheck/summary.json').read_text(encoding="utf-8"))
+    for map_id in labels:
+        old32, old64 = [
+            next(row for row in current['regression'][mode] if row['name'] == f'map{map_id}_final')
+            for mode in ('float32', 'float64')
+        ]
+        fresh = [row for row in current['holdout'] if row['map'] == map_id]
+        n, k, c, t = (sum(row[key] for row in fresh)
+                      for key in ('episodes', 'successes', 'collisions', 'timeouts'))
+        require_row([str(map_id), f"{old32['successes']}/{old32['episodes']}",
+                     f"{old64['successes']}/{old64['episodes']}", f"{k}/{n}", str(c), str(t)],
+                    f'recheck map {map_id}')
+
     for name,label in [('map0_base','За приближение к цели по прямой'),
                        ('map0_shaped500','За продвижение по маршруту и подходящую скорость')]:
         r=results[name]

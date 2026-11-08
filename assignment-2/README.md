@@ -3,20 +3,16 @@
 **Автор:** Карим Хабибрахманов / Karim Khabibrakhmanov  
 **Курс:** [F26] Introduction to Adaptive and Efficient Machine Learning, Innopolis
 
-Обучение нейронной политики на JAX в актуальной среде Assignment 1
-([`9f015e2`](https://github.com/Karimkhab/adaptive-and-efficient-ml/commit/9f015e2cbadbfb24ea54a894d8db3e4b552c0554)).
+Обучение нейронной политики на JAX в среде Assignment 1. Текущая редакция среды записана в метаданных запусков как `consistent_geometry_v1`.
 Успех требует **остановки**: расстояние ≤1, скорость ≤0.001, без столкновения.
 Actor получает только 70 чисел наблюдения v2. Полное состояние, экспертный
 контроллер и будущая траектория трафика ему не передаются.
 
 Материалы: [отчёт](REPORT.md), [видео](artifacts/demo.mp4),
-[результаты по каждому эпизоду](artifacts/evaluation/summary.json),
+[текущая перепроверка](artifacts/recheck/summary.json), [исходные эксперименты](artifacts/evaluation/summary.json),
 [графики](artifacts/figures/learning.png), [проверки](artifacts/tests.txt).
 Точные настройки и обучающие CSV находятся рядом с каждым checkpoint.
-`training.csv` содержит обучающую награду с включёнными добавками; итоговые
-таблицы качества используют исходную награду из `evaluation/`.
-Демонстрации A1 с эвристическим контроллером используются только для аудита среды;
-числа RL относятся к `evaluation/`.
+`training.csv` содержит обучающую награду с включёнными добавками; таблицы качества используют исходную награду среды. Демонстрации A1 с эвристическим контроллером проверяют саму среду.
 
 ## Установка
 
@@ -42,9 +38,8 @@ python -m pip check
 ```
 
 При запрете активации PowerShell можно вызывать `.\.venv\Scripts\python.exe`
-вместо `python`. Скрипты сами выбирают CPU. [Настоящий CI A2](https://github.com/Karimkhab/adaptive-and-efficient-ml/actions/runs/41421653274)
-прошёл Linux и Windows: на каждой ОС51 тест, update обучения,128/128 новых
-стартов map2,8/8 endpoint cases и запись/декодирование видео. Доказательства
+вместо `python`. Скрипты сами выбирают CPU. [CI исходной версии](https://github.com/Karimkhab/adaptive-and-efficient-ml/actions/runs/41421653274)
+прошёл на Linux и Windows. На каждой ОС прошёл 51 тест, одно обновление обучения, 128/128 стартов карты 2, 8/8 граничных случаев и запись видео. Доказательства
 и точные версии находятся в отчёте и `artifacts/ci_native/`.
 
 ## Проверить и запустить готовую модель
@@ -63,8 +58,8 @@ python src/play.py --checkpoint artifacts/ppo_v2_map0_seed0/checkpoint_1500.npz 
 | Карта | Checkpoint | Подготовка |
 | --- | --- | --- |
 | 0 | `artifacts/ppo_v2_map0_seed0/checkpoint_1500.npz` | PPO с нуля |
-| 1 | `artifacts/ppo_v2_map1_transfer_seed0/checkpoint_1000.npz` | PPO из весов map0 после 500 updates, затем 1000 updates на map1 |
-| 2 | `artifacts/ppo_v2_map2_final/checkpoint.npz` | PPO1600 +600 safety-updates; inference30 Гц, обучение5 Гц |
+| 1 | `artifacts/ppo_v2_map1_rechecked/checkpoint.npz` | Перенос с карты 0, затем 150 дополнительных обновлений в исправленной среде, управление 10 Гц |
+| 2 | `artifacts/ppo_v2_map2_rechecked/checkpoint.npz` | 350 дополнительных обновлений в исправленной среде, управление 7.5 Гц |
 | 3 | `artifacts/ppo_v2_map3_seed0/checkpoint_1000.npz` | PPO с нуля |
 
 Это отдельные политики для четырёх фиксированных карт. Результат одной модели
@@ -73,29 +68,38 @@ python src/play.py --checkpoint artifacts/ppo_v2_map0_seed0/checkpoint_1500.npz 
 ## Воспроизвести измерения без обучения
 
 ```bash
-python src/evaluation_suite.py
-python src/benchmark.py
-python src/charts.py
+python src/evaluation_suite.py --final-only --summary-only --output artifacts/recheck-reproduced
+python src/benchmark.py --repeats 9
 python src/make_rl_video.py
 python src/report.py
 ```
 
-`report.py` сверяет ключевые таблицы и ссылки с сохранёнными измерениями.
-Объясняющий текст отчёта редактируется вручную; скрипт его не перезаписывает.
+Первая команда повторяет исходные диапазоны seed в исправленной среде с актуальными
+весами. Для карты 2 это 50000–50511, для остальных карт 20000–20127. Записываются
+парковки, столкновения и таймауты для детерминированных и случайных действий,
+канонического старта и восьми граничных вариантов. `--heading-noise` задаёт
+максимальное отклонение курса в радианах при обычной оценке. Без этого флага
+используется ±10°.
 
-Оценка использует замороженные checkpoints: по128 reset seeds20000–20127 для карт0/1/3,
-а для доработанной карты2 —512 новых seeds50000–50511. Старые128 стартов map2
-теперь регрессионные. Проверяются
-канонические старты, восемь граничных вариантов на карту, стохастические действия,
-baseline и проверки переноса. Для проверки разработки использовались другие
-seeds (для map2 —10000–10511). Карты известны при обучении; это проверка новых условий
-старта/трафика, а не новых карт. Метрика — парковка, отдельно collision и timeout;
-return всегда исходный, без обучающих добавок к награде.
-
-`benchmark.py` отделяет первый вызов с компиляцией от пяти прогретых запусков,
-синхронизирует JAX и сверяет конечные состояния при одинаковом числе переходов.
+`report.py` сверяет таблицы и ссылки отчёта с сохранёнными измерениями.
+`benchmark.py` отделяет компиляцию от прогретых запусков и сверяет состояние,
+суммы наблюдений и наград и число сигналов завершения при одинаковой работе.
 Ролик идёт в 2 раза быстрее симуляции, с явной меткой на экране. Он показывает
 фиксированные канонические старты и не заменяет таблицу всех исходов.
+
+## Повтор оценки с физикой float64
+
+`JAX_ENABLE_X64=1` включает 64-битные вычисления симулятора. Готовая модель
+по-прежнему получает наблюдения `float32` и использует сохранённые веса.
+Для карты 2 на тех же 512 стартах:
+
+```bash
+JAX_ENABLE_X64=1 python src/evaluate_rl.py --checkpoint artifacts/ppo_v2_map2_rechecked/checkpoint.npz --maps 2 --episodes 512 --seed 50000 --output artifacts/evaluation/map2-float64.json
+```
+
+В PowerShell сначала задайте `$env:JAX_ENABLE_X64 = "1"`, затем выполните
+команду Python без префикса. Для исходного режима установите значение `0`.
+[Сравнение на всех картах](artifacts/precision_comparison.json).
 
 ## Обучить с нуля
 
@@ -106,14 +110,23 @@ python src/train.py --map 0 --randomize --route-reward --parking-reward --update
 python src/evaluate_rl.py --checkpoint artifacts/my_run/checkpoint_0500.npz --maps 0 --episodes 128 --seed 20000 --output artifacts/my_run/evaluation.json
 ```
 
-Полная матрица из отчёта в **новый** каталог:
+Повтор дообучения после исправления среды:
+
+```bash
+python src/train.py --map 1 --seed 21 --updates 225 --randomize --route-reward --parking-reward --clearance-speed --clearance-cost 4 --clearance-margin 1 --cruise-speed 3.5 --speed-cost .4 --learning-rate .00007 --entropy 0 --init-checkpoint artifacts/ppo_v2_map1_transfer_seed0/checkpoint_1000.npz --output artifacts/reproduced-map1
+python src/train.py --map 2 --seed 12 --updates 400 --randomize --route-reward --parking-reward --clearance-speed --clearance-cost 5 --clearance-margin 1.1 --cruise-speed 2.8 --speed-cost .75 --learning-rate .00015 --entropy .001 --init-checkpoint artifacts/ppo_v2_map2_seed0/checkpoint_1600.npz --output artifacts/reproduced-map2
+```
+
+В итоговых метаданных указано `inference_repeat=3` для checkpoint 150 карты 1 и `inference_repeat=4` для checkpoint 350 карты 2. Если оцениваете собственные веса, задайте это поле в JSON рядом с соответствующим NPZ. Готовые файлы выше уже содержат эти значения.
+
+Параметры исходной матрицы можно запустить в исправленной среде, задав **новый** каталог:
 
 ```bash
 python src/train_all.py --root artifacts/reproduced
 python src/evaluation_suite.py --root artifacts/reproduced
 ```
 
-Для сравнения с исходной наградой уберите `--route-reward --parking-reward`.
+Для точного контекста исходных таблиц используйте [версию от 2 ноября](https://github.com/Karimkhab/adaptive-and-efficient-ml/tree/5f0ace8/assignment-2). Для сравнения с исходной наградой уберите `--route-reward --parking-reward`.
 Существующий обучающий каталог защищён от случайной перезаписи. Веса позволяют
 полностью повторить inference; checkpoints не содержат состояния оптимизатора
 и не являются точным снимком для побитового продолжения прерванного обучения.

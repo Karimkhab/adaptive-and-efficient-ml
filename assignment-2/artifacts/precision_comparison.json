@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-08",
+  "environment_revision": "consistent_geometry_v1",
+  "observation_dtype": "float32",
+  "weights_dtype": "float32",
+  "per_map": [
+    {
+      "map": 0,
+      "episodes": 128,
+      "parked_float32": 128,
+      "parked_float64": 128,
+      "outcomes_changed": 0,
+      "steps_changed": 0,
+      "max_return_error_float32": 3.4790039080689894e-05,
+      "max_return_error_float64": 5.684341886080802e-14
+    },
+    {
+      "map": 1,
+      "episodes": 128,
+      "parked_float32": 128,
+      "parked_float64": 128,
+      "outcomes_changed": 0,
+      "steps_changed": 0,
+      "max_return_error_float32": 5.7983398448868684e-05,
+      "max_return_error_float64": 1.1368683772161603e-13
+    },
+    {
+      "map": 2,
+      "episodes": 512,
+      "parked_float32": 512,
+      "parked_float64": 512,
+      "outcomes_changed": 0,
+      "steps_changed": 9,
+      "max_return_error_float32": 9.307861327556566e-05,
+      "max_return_error_float64": 1.1368683772161603e-13
+    },
+    {
+      "map": 3,
+      "episodes": 128,
+      "parked_float32": 128,
+      "parked_float64": 128,
+      "outcomes_changed": 0,
+      "steps_changed": 0,
+      "max_return_error_float32": 2.3905436194127105e-05,
+      "max_return_error_float64": 5.684341886080802e-14
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "controller": "deterministic heuristic, privileged state; no RL training",
-  "python": "3.12.14",
+  "python": "3.12.15",
   "platform": "macOS-26.6.2-arm64-arm-64bit",
   "jax": "0.6.2",
   "devices": [
@@ -12,50 +12,50 @@
     {
       "map_id": 0,
       "seed": 0,
-      "steps": 1376,
-      "simulation_seconds": 45.86666666666667,
+      "steps": 1375,
+      "simulation_seconds": 45.833333333333336,
       "goal_reached": true,
       "collision": false,
       "truncated": false,
-      "return": 165.0058100949973,
-      "final_distance": 0.40752410888671875,
+      "return": 165.00783117301762,
+      "final_distance": 0.40883636474609375,
       "final_speed": 0.0,
       "goal_speed_limit": 0.001,
-      "min_clearance": 0.3040893077850342,
+      "min_clearance": 0.30394959449768066,
       "max_speed": 2.9999985694885254,
-      "execution_seconds": 0.7207666670001345
+      "execution_seconds": 1.2152037500054576
     },
     {
       "map_id": 1,
       "seed": 0,
-      "steps": 1363,
-      "simulation_seconds": 45.43333333333333,
+      "steps": 1364,
+      "simulation_seconds": 45.46666666666667,
       "goal_reached": true,
       "collision": false,
       "truncated": false,
-      "return": 165.02983344811946,
-      "final_distance": 0.4268341064453125,
-      "final_speed": 0.0005170931108295918,
+      "return": 165.04762590769678,
+      "final_distance": 0.40570831298828125,
+      "final_speed": 0.0,
       "goal_speed_limit": 0.001,
-      "min_clearance": 0.31023693084716797,
+      "min_clearance": 0.3101205825805664,
       "max_speed": 2.9999985694885254,
-      "execution_seconds": 0.682194957997126
+      "execution_seconds": 0.9064158330002101
     },
     {
       "map_id": 2,
       "seed": 0,
-      "steps": 1537,
-      "simulation_seconds": 51.233333333333334,
+      "steps": 1539,
+      "simulation_seconds": 51.3,
       "goal_reached": true,
       "collision": false,
       "truncated": false,
-      "return": 167.17546861199662,
-      "final_distance": 0.5022996664047241,
+      "return": 167.18018912849948,
+      "final_distance": 0.49090996384620667,
       "final_speed": 0.0,
       "goal_speed_limit": 0.001,
-      "min_clearance": 0.3002932071685791,
-      "max_speed": 2.969123125076294,
-      "execution_seconds": 0.7459690420000697
+      "min_clearance": 0.30043888092041016,
+      "max_speed": 2.969050407409668,
+      "execution_seconds": 1.1607322079944424
     },
     {
       "map_id": 3,
@@ -65,13 +65,14 @@
       "goal_reached": true,
       "collision": false,
       "truncated": false,
-      "return": 162.34880268387496,
-      "final_distance": 0.39786529541015625,
+      "return": 162.3465749011375,
+      "final_distance": 0.40009307861328125,
       "final_speed": 0.0,
       "goal_speed_limit": 0.001,
-      "min_clearance": 1.8072078227996826,
+      "min_clearance": 1.8065240383148193,
       "max_speed": 2.9999985694885254,
-      "execution_seconds": 0.28916025000216905
+      "execution_seconds": 0.36183095900923945
     }
-  ]
+  ],
+  "environment_revision": "consistent_geometry_v1"
 }

@@ -1,0 +1,123 @@
+{
+  "date": "2026-11-07",
+  "scope": "Paired deterministic inference on the original A2 evaluation seeds and frozen float32 checkpoints.",
+  "observation_dtype": "float32",
+  "weights_dtype": "float32",
+  "simulator": {
+    "jax": "0.6.2",
+    "python": "3.12.15",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "devices": "[CpuDevice(id=0)]"
+  },
+  "episodes_per_mode": 896,
+  "per_map": [
+    {
+      "map": 0,
+      "episodes": 128,
+      "seed_start": 20000,
+      "checkpoint": "ppo_v2_map0_seed0/checkpoint_1500.npz",
+      "checkpoint_sha256": "712be7bd1be67176f9862a59c887fc2d22b914fe2e48c5a9f77472ba9712342c",
+      "control_repeat": 6,
+      "float32": {
+        "successes": 128,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 20.215364583333333,
+        "min_clearance": 0.08685159683227539,
+        "raw_return_reconstruction_max_error": 3.072102865075976e-05
+      },
+      "float64": {
+        "successes": 128,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 20.215885416666666,
+        "min_clearance": 0.0868662211259763,
+        "raw_return_reconstruction_max_error": 5.684341886080802e-14
+      },
+      "changed_outcomes": 0,
+      "changed_durations": 1,
+      "max_absolute_duration_difference_steps": 2
+    },
+    {
+      "map": 1,
+      "episodes": 128,
+      "seed_start": 20000,
+      "checkpoint": "ppo_v2_map1_transfer_seed0/checkpoint_1000.npz",
+      "checkpoint_sha256": "6c988acd1810f44dc7180f18a8944f4d09a243d3e7cdb8d07f99e308450a0cf8",
+      "control_repeat": 6,
+      "float32": {
+        "successes": 128,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 20.11640625,
+        "min_clearance": 0.08672165870666504,
+        "raw_return_reconstruction_max_error": 3.407796225474158e-05
+      },
+      "float64": {
+        "successes": 128,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 20.11640625,
+        "min_clearance": 0.08672951589065514,
+        "raw_return_reconstruction_max_error": 5.684341886080802e-14
+      },
+      "changed_outcomes": 0,
+      "changed_durations": 0,
+      "max_absolute_duration_difference_steps": 0
+    },
+    {
+      "map": 2,
+      "episodes": 512,
+      "seed_start": 50000,
+      "checkpoint": "ppo_v2_map2_final/checkpoint.npz",
+      "checkpoint_sha256": "b26494271ecb4905ea5a614a3ef2e06d0af2aabe158221ccf07ea3cf0f9d3421",
+      "control_repeat": 1,
+      "float32": {
+        "successes": 512,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 27.764908854166666,
+        "min_clearance": 0.3635737895965576,
+        "raw_return_reconstruction_max_error": 0.0002690633137945042
+      },
+      "float64": {
+        "successes": 512,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 27.728580729166666,
+        "min_clearance": 0.36357639082798254,
+        "raw_return_reconstruction_max_error": 1.1368683772161603e-12
+      },
+      "changed_outcomes": 0,
+      "changed_durations": 35,
+      "max_absolute_duration_difference_steps": 291
+    },
+    {
+      "map": 3,
+      "episodes": 128,
+      "seed_start": 20000,
+      "checkpoint": "ppo_v2_map3_seed0/checkpoint_1000.npz",
+      "checkpoint_sha256": "03caaf0dafeee36292eebd557967802e0d24d59626c8a12a9c91506c9259bc85",
+      "control_repeat": 6,
+      "float32": {
+        "successes": 128,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 14.333854166666667,
+        "min_clearance": 2.6830177307128906,
+        "raw_return_reconstruction_max_error": 2.3295084645269526e-05
+      },
+      "float64": {
+        "successes": 128,
+        "collisions": 0,
+        "timeouts": 0,
+        "episode_sim_seconds_mean": 14.333854166666667,
+        "min_clearance": 2.682914642060772,
+        "raw_return_reconstruction_max_error": 5.684341886080802e-14
+      },
+      "changed_outcomes": 0,
+      "changed_durations": 0,
+      "max_absolute_duration_difference_steps": 0
+    }
+  ]
+}

@@ -29,7 +29,7 @@ jobs:
       - run: python -m pytest -q --junitxml=artifacts/ci-tests.xml
       - run: python src/train.py --map 3 --randomize --route-reward --parking-reward --envs 4 --rollout 16 --max-steps 48 --updates 1 --epochs 1 --minibatches 1 --output artifacts/ci-training
       - run: python src/ci_check.py
-      - run: python src/evaluation_suite.py --episodes 16 --map2-episodes 64 --map2-seed 61000
+      - run: python src/evaluation_suite.py --final-only --episodes 16 --map2-episodes 64 --map2-seed 61000 --output artifacts/ci-evaluation
       - run: python src/make_rl_video.py --maps 3 2 --output artifacts/ci-video.mp4
       - run: python src/verify_video.py artifacts/ci-video.mp4
       - uses: actions/upload-artifact@v4
@@ -37,7 +37,7 @@ jobs:
         with:
           name: assignment2-${{ matrix.os }}
           path: |
-            assignment-2/artifacts/evaluation/
+            assignment-2/artifacts/ci-evaluation/
             assignment-2/artifacts/ci-quality.json
             assignment-2/artifacts/ci-tests.xml
             assignment-2/artifacts/ci-video*

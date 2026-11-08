@@ -1,0 +1,16 @@
+{
+  "eager": {
+    "updates": 15,
+    "collect_median_s": 0.6001256669987924,
+    "optimizer_median_s": 0.01691900000150781,
+    "parked": 425,
+    "episodes": 436
+  },
+  "conditional": {
+    "updates": 15,
+    "collect_median_s": 0.3835424169956241,
+    "optimizer_median_s": 0.01665175000380259,
+    "parked": 428,
+    "episodes": 437
+  }
+}

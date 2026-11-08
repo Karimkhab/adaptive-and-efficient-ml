@@ -1,11 +1,11 @@
 {
-  "frames": 1656,
+  "frames": 1649,
   "fps": 30.0,
-  "duration_seconds": 55.2,
+  "duration_seconds": 54.96666666666667,
   "decoded_indices": [
     0,
-    828,
-    1655
+    824,
+    1648
   ],
   "frame_shape": [
     800,

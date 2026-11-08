@@ -1,14 +1,15 @@
 {
   "checkpoints": {
     "0": "ppo_v2_map0_seed0/checkpoint_1500.npz",
-    "1": "ppo_v2_map1_transfer_seed0/checkpoint_1000.npz",
-    "2": "ppo_v2_map2_final/checkpoint.npz",
+    "1": "ppo_v2_map1_rechecked/checkpoint.npz",
+    "2": "ppo_v2_map2_rechecked/checkpoint.npz",
     "3": "ppo_v2_map3_seed0/checkpoint_1000.npz"
   },
-  "map2_control_frequency_hz": 30,
+  "map2_control_frequency_hz": 7.5,
   "map2_training_frequency_hz": 5,
   "map2_fresh_test_seeds": [
-    50000,
-    50511
-  ]
+    90000,
+    92047
+  ],
+  "environment_revision": "consistent_geometry_v1"
 }

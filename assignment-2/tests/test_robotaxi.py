@@ -45,8 +45,9 @@ def test_standstill_steering_and_braking_do_not_move(env):
 def test_acceleration_matches_first_step(env):
     p, s = env
     pos, heading, speed = vehicle_motion(s.agent_pos, s.heading, s.speed, jnp.array([1., 0.]), p)
-    assert float(speed) == pytest.approx(p.max_accel * p.step_size)
-    assert float(pos[0] - s.agent_pos[0]) == pytest.approx(.5 * p.max_accel * p.step_size**2, abs=1e-6)
+    net_accel = p.max_accel - p.rolling_friction
+    assert float(speed) == pytest.approx(net_accel * p.step_size)
+    assert float(pos[0] - s.agent_pos[0]) == pytest.approx(.5 * net_accel * p.step_size**2, abs=1e-6)
     assert float(heading) == 0.
 
 
@@ -223,3 +224,41 @@ def test_head_on_traffic_reverses_without_overlap(env):
     positions, velocities = move_obstacles(state, p)
     assert float(velocities[0, 0]) < 0 < float(velocities[1, 0])
     assert float(jnp.linalg.norm(positions[1] - positions[0])) > 2
+
+
+def test_small_throttle_stays_at_rest_and_braking_stops_within_step(env):
+    p, s = env
+    pos, _, speed = vehicle_motion(s.agent_pos, s.heading, s.speed, jnp.array([.02, 0.]), p)
+    np.testing.assert_array_equal(pos, s.agent_pos)
+    assert float(speed) == 0.
+    origin = jnp.zeros_like(s.agent_pos)
+    pos, _, speed = vehicle_motion(origin, s.heading, jnp.array(.05), jnp.array([-1., 0.]), p)
+    decel = p.max_brake + p.drag * .05 + p.rolling_friction
+    assert float(pos[0]) == pytest.approx(.05**2 / (2 * decel), rel=1e-5)
+    assert float(speed) == 0.
+
+
+def test_boundary_is_visible_and_contributes_to_signed_clearance(env):
+    p, s = env
+    s = replace(s, agent_pos=[1.05, 22.5], heading=math.pi,
+                agent_forward_dir=[-1., 0.], speed=4.)
+    obs = RobotaxiEnv.get_observation(s, p)
+    front = p.num_ray_sensors // 2
+    assert float(obs.ray_distances[front] * p.perception_radius) == pytest.approx(1.05)
+    assert float(obs.ray_closing_speeds[front]) > 0.
+    _, end, _, _, info = RobotaxiEnv.step(KEY, s, jnp.zeros(2), p)
+    assert info["collision"]
+    assert float(info["clearance"]) == pytest.approx(float(end.agent_pos[0]) - p.radius)
+    assert float(info["clearance"]) < 0.
+
+
+def test_replan_enters_grid_through_a_reachable_free_cell(env):
+    p, s = env
+    s = replace(s, agent_pos=[2.2, 22.5], time=jnp.asarray(29, dtype=s.time.dtype))
+    obs, end, _, _, info = RobotaxiEnv.step(KEY, s, jnp.zeros(2), p)
+    assert not info["collision"]
+    np.testing.assert_allclose(end.path_array[0], end.agent_pos)
+    np.testing.assert_allclose(end.path_array[-1], s.goal_pos)
+    gap = swept_clearance(end.agent_pos, end.path_array[1], s.static_obstacles, s.static_obstacles, p.radius)
+    assert float(gap) > 0.
+    assert float(obs.direction_of_path[0]) > 0.

@@ -8,42 +8,56 @@
   "action_repeat": 1,
   "transitions_per_trial": 1024,
   "equal_final_states": true,
+  "equal_observation_reward_and_done_totals": true,
+  "work": "environment state, observation, reward and done; fixed actions, no PPO",
   "methods": {
     "python_serial_jit_step": {
-      "cold_seconds_including_compile": 0.290108417000738,
+      "cold_seconds_including_compile": 0.3734267080144491,
       "warm_seconds": [
-        0.02016091699624667,
-        0.01916295800037915,
-        0.018676249994314276,
-        0.019080582998867612,
-        0.01906158299971139
+        0.02521158300805837,
+        0.024644624994834885,
+        0.024282832993776537,
+        0.023726542000076734,
+        0.023977415999979712,
+        0.023775666995788924,
+        0.023732166999252513,
+        0.023910875010187738,
+        0.02360137499636039
       ],
-      "warm_median_seconds": 0.019080582998867612,
-      "physics_transitions_per_second": 53667.12327714368
+      "warm_median_seconds": 0.023910875010187738,
+      "physics_transitions_per_second": 42825.70167606593
     },
     "python_loop_vmap": {
-      "cold_seconds_including_compile": 0.3115691249986412,
+      "cold_seconds_including_compile": 0.36390825000125915,
       "warm_seconds": [
-        0.04093541700422065,
-        0.04050541699689347,
-        0.040173207999032456,
-        0.040231833001598716,
-        0.04011449999961769
+        0.051052292008535005,
+        0.05111808399669826,
+        0.05148454099253286,
+        0.051163000011001714,
+        0.05149816699849907,
+        0.05126170800940599,
+        0.051906166001572274,
+        0.05154320799920242,
+        0.051356916010263376
       ],
-      "warm_median_seconds": 0.040231833001598716,
-      "physics_transitions_per_second": 25452.48186825862
+      "warm_median_seconds": 0.051356916010263376,
+      "physics_transitions_per_second": 19938.891965307255
     },
     "jit_scan_vmap": {
-      "cold_seconds_including_compile": 0.13642662500205915,
+      "cold_seconds_including_compile": 0.2604948749940377,
       "warm_seconds": [
-        0.0028153340026619844,
-        0.002934666998044122,
-        0.002880749998439569,
-        0.002888958995754365,
-        0.0028301670026849024
+        0.012677624996285886,
+        0.012607041993760504,
+        0.012635374994715676,
+        0.012558542002807371,
+        0.012594500003615394,
+        0.012973459000932053,
+        0.012170832997071557,
+        0.012251542008016258,
+        0.012685124995186925
       ],
-      "warm_median_seconds": 0.002880749998439569,
-      "physics_transitions_per_second": 355462.9872618851
+      "warm_median_seconds": 0.012607041993760504,
+      "physics_transitions_per_second": 81224.44586976069
     }
   }
 }

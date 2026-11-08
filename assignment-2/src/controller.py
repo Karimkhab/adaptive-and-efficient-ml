@@ -7,7 +7,7 @@ from functools import partial
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from env.robotaxi import move_obstacles, to_local, vehicle_motion, swept_clearance
+from env.robotaxi import boundary_clearance, move_obstacles, to_local, vehicle_motion, swept_clearance
 
 
 def tracking(position, heading, speed, goal, path, p):

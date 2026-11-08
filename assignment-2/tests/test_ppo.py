@@ -130,3 +130,23 @@ def test_safety_objective_does_not_modify_actions_physics_or_raw_score():
     np.testing.assert_array_equal(original[1],safe[1])
     np.testing.assert_array_equal(original[2],safe[4]['raw_reward'])
     assert float(original[2])!=float(safe[2])
+
+
+def test_route_potential_is_continuous_when_nearest_segment_switches():
+    _, initial, _, _ = make_env(2)
+    before = jnp.array([35.30697, 8.154994])
+    after = before + jnp.array([-.002, 0.])
+    change = route_potential(after, initial.path_array) - route_potential(before, initial.path_array)
+    assert abs(float(change)) < .15
+
+
+def test_heading_noise_controls_randomized_heading_only():
+    key = jax.random.PRNGKey(74537)
+    _, initial, still_reset, _ = make_env(2, randomize=True, heading_noise=0.)
+    _, _, wide_reset, _ = make_env(2, randomize=True, heading_noise=.3)
+    still, _ = still_reset(key)
+    wide, _ = wide_reset(key)
+    assert float(still.heading) == float(initial.heading)
+    assert 0. < abs(float(wide.heading - initial.heading)) <= .3
+    np.testing.assert_array_equal(still.speed, wide.speed)
+    np.testing.assert_array_equal(still.kinematic_obstacles, wide.kinematic_obstacles)

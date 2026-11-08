@@ -14,11 +14,15 @@ import numpy as np
 
 from ppo import load_checkpoint, init_network, forward, sample, control_repeat
 from rl_env import make_env
-from env.robotaxi import RobotaxiEnv
+from env.robotaxi import DEFAULT_HEADING_NOISE, RobotaxiEnv
 
 
-def evaluate(params, config, map_id, episodes=32, seed=2000, heading_noise=.15,
+def evaluate(params, config, map_id, episodes=32, seed=2000, heading_noise=None,
              policy="trained", stochastic=False, randomize=True, variants=False):
+    if heading_noise is None:
+        heading_noise = DEFAULT_HEADING_NOISE if randomize else 0.
+    if not math.isfinite(heading_noise) or heading_noise < 0:
+        raise ValueError("heading noise must be finite and nonnegative")
     repeat=control_repeat(config)
     p, initial, reset, step = make_env(map_id, repeat, config["max_steps"], heading_noise,
                                      randomize=randomize)
@@ -31,7 +35,7 @@ def evaluate(params, config, map_id, episodes=32, seed=2000, heading_noise=.15,
 
     @jax.jit
     def run(params, key):
-        keys = jax.vmap(jax.random.PRNGKey)(jnp.arange(seed, seed + episodes))
+        keys = jax.vmap(jax.random.PRNGKey)(jnp.arange(seed, seed + episodes, dtype=jnp.int32))
         if variants:
             states = fixed_states
             obs = jax.vmap(lambda s: RobotaxiEnv.get_observation(s, p).as_vector())(states)
@@ -42,7 +46,8 @@ def evaluate(params, config, map_id, episodes=32, seed=2000, heading_noise=.15,
             states, obs, key = carry
             key, action_key = jax.random.split(key)
             if policy == "random":
-                action = jax.random.uniform(action_key, (episodes, 2), minval=-1., maxval=1.)
+                action = jax.random.uniform(
+                    action_key, (episodes, 2), dtype=obs.dtype, minval=-1., maxval=1.)
             elif stochastic:
                 action, _, _, _ = sample(params, obs, action_key)
             else:
@@ -71,19 +76,21 @@ def evaluate(params, config, map_id, episodes=32, seed=2000, heading_noise=.15,
     initial_distance = float(jnp.linalg.norm(initial.agent_pos - initial.goal_pos))
     reconstructed = (initial_distance - info["distance"][-1] - p.time_cost * np.asarray(states.time) / p.fps
                      + p.goal_bonus * success - p.collision_penalty * collision)
-    # Near-stationary float32 norm subtraction can accumulate a few ULPs per
-    # physical step; use a distance-scale/step bound instead of a fixed .02.
+    # Near-stationary norm subtraction can accumulate a few ULPs per
+    # physical step; base the bound on the simulator precision.
     # This changes only the independent consistency assertion, never rewards
     # or the exact parking/collision/timeout decisions.
-    distance_ulp=float(np.spacing(np.float32(p.cell_size*math.hypot(*p.map_height_width))))
+    distance_scale = p.cell_size * math.hypot(*p.map_height_width)
+    distance_ulp = float(np.spacing(rewards.dtype.type(distance_scale)))
     return_tolerance=np.maximum(.002,4*distance_ulp*np.asarray(states.time))
     assert np.all(np.abs(returns-reconstructed)<=return_tolerance), (returns,reconstructed,return_tolerance)
     summary = {"map": map_id, "policy": policy, "stochastic": stochastic,
-               "episodes": episodes, "seed_start": seed,
-               "reset_distribution": ({"fixed_variants": [{"name": name, "settings": settings} for name, settings in VARIANTS]} if variants else ({"heading_radians": [-float(jnp.pi/18), float(jnp.pi/18)],
+               "episodes": episodes, "seed_start": seed, "physics_dtype": str(initial.agent_pos.dtype),
+               "reset_distribution": ({"fixed_variants": [{"name": name, "settings": settings} for name, settings in VARIANTS]} if variants else ({"heading_radians": [-heading_noise, heading_noise],
                    "speed": [0., .5], "traffic_speed_multiplier": [.8, 1.2], "traffic_phase_steps": [0, p.fps]}
                    if randomize else {"heading_radians": [-heading_noise, heading_noise], "other_state": "canonical"})),
-               "randomize_all": randomize and not variants, "observation_version": 2,
+               "randomize_all": randomize and not variants, "observation_version": RobotaxiEnv.OBSERVATION_VERSION,
+               "environment_revision": RobotaxiEnv.ENVIRONMENT_REVISION,
                "variant_suite": variants,
                "training_repeat":config['repeat'],"control_repeat":repeat,
                "control_frequency_hz":p.fps/repeat,
@@ -113,13 +120,17 @@ def main():
     parser.add_argument("--maps", type=int, nargs="+", default=[3])
     parser.add_argument("--episodes", type=int, default=32)
     parser.add_argument("--seed", type=int, default=2000)
-    parser.add_argument("--heading-noise", type=float, default=.15)
+    reset_mode = parser.add_mutually_exclusive_group()
+    reset_mode.add_argument("--heading-noise", type=float,
+                            help="Maximum heading offset in radians (default: pi/18)")
     parser.add_argument("--policy", choices=["trained", "untrained", "random"], default="trained")
     parser.add_argument("--stochastic", action="store_true")
-    parser.add_argument("--canonical", action="store_true")
-    parser.add_argument("--variants", action="store_true")
+    reset_mode.add_argument("--canonical", action="store_true")
+    reset_mode.add_argument("--variants", action="store_true")
     parser.add_argument("--output", type=Path, default=Path("artifacts/evaluation.json"))
     args = parser.parse_args()
+    if args.heading_noise is not None and (not math.isfinite(args.heading_noise) or args.heading_noise < 0):
+        parser.error("heading noise must be finite and nonnegative")
     params, config = load_checkpoint(args.checkpoint)
     if args.policy == "untrained":
         params = init_network(config["seed"], hidden=config["hidden"])

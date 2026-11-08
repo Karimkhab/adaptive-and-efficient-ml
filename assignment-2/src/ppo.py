@@ -32,14 +32,14 @@ def init_network(seed, obs_dim=70, hidden=64):
         if n < m:
             q = q.T
         return {"w": jnp.array(q[:n, :m] * scale, dtype=jnp.float32),
-                "b": jnp.zeros(m)}
+                "b": jnp.zeros(m, dtype=jnp.float32)}
 
     def net(out, scale):
         return [layer(obs_dim, hidden, math.sqrt(2)),
                 layer(hidden, hidden, math.sqrt(2)), layer(hidden, out, scale)]
 
     return {"actor": net(2, .01), "critic": net(1, 1.),
-            "log_std": jnp.full((2,), -.5)}
+            "log_std": jnp.full((2,), -.5, dtype=jnp.float32)}
 
 
 def mlp(layers, x):
@@ -67,7 +67,7 @@ def log_prob(params, mean, latent):
 
 def sample(params, obs, key):
     mean, value = forward(params, obs)
-    latent = mean + jnp.exp(jnp.clip(params["log_std"], -5., 1.)) * jax.random.normal(key, mean.shape)
+    latent = mean + jnp.exp(jnp.clip(params["log_std"], -5., 1.)) * jax.random.normal(key, mean.shape, dtype=mean.dtype)
     return jnp.tanh(latent), latent, log_prob(params, mean, latent), value
 
 

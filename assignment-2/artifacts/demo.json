@@ -12,10 +12,10 @@
       "truncated": false,
       "physics_steps": 432,
       "sim_seconds": 14.4,
-      "raw_return": 163.19104033568874,
-      "final_distance": 0.36896103620529175,
+      "raw_return": 163.19248571898788,
+      "final_distance": 0.3675149381160736,
       "final_speed": 0.0,
-      "min_clearance": 3.9259886741638184
+      "min_clearance": 3.925264835357666
     },
     {
       "map": 0,
@@ -26,38 +26,38 @@
       "truncated": false,
       "physics_steps": 608,
       "sim_seconds": 20.266666666666666,
-      "raw_return": 167.2723762448877,
-      "final_distance": 0.7009546756744385,
+      "raw_return": 167.73938220366836,
+      "final_distance": 0.2339555323123932,
       "final_speed": 0.0,
-      "min_clearance": 0.4682431221008301
+      "min_clearance": 0.18777775764465332
     },
     {
       "map": 1,
-      "checkpoint": "artifacts/ppo_v2_map1_transfer_seed0/checkpoint_1000.npz",
-      "checkpoint_sha256": "6c988acd1810f44dc7180f18a8944f4d09a243d3e7cdb8d07f99e308450a0cf8",
+      "checkpoint": "artifacts/ppo_v2_map1_rechecked/checkpoint.npz",
+      "checkpoint_sha256": "e5e38c71aec642d0b86815f6c4c9b96158cc14dd629581c43db21d0ad82f92c0",
       "goal_reached": true,
       "collision": false,
       "truncated": false,
-      "physics_steps": 607,
-      "sim_seconds": 20.233333333333334,
-      "raw_return": 167.93618439370766,
-      "final_distance": 0.0404837429523468,
+      "physics_steps": 619,
+      "sim_seconds": 20.633333333333333,
+      "raw_return": 167.55023985076696,
+      "final_distance": 0.38642555475234985,
       "final_speed": 0.0,
-      "min_clearance": 0.2912476062774658
+      "min_clearance": 1.4527003765106201
     },
     {
       "map": 2,
-      "checkpoint": "artifacts/ppo_v2_map2_final/checkpoint.npz",
-      "checkpoint_sha256": "b26494271ecb4905ea5a614a3ef2e06d0af2aabe158221ccf07ea3cf0f9d3421",
+      "checkpoint": "artifacts/ppo_v2_map2_rechecked/checkpoint.npz",
+      "checkpoint_sha256": "1b127d27e5b83cf9f11e71905d3fcfc7a9a86df9b555d7f502b783b3b02d23e8",
       "goal_reached": true,
       "collision": false,
       "truncated": false,
-      "physics_steps": 939,
-      "sim_seconds": 31.3,
-      "raw_return": 169.16368629503995,
-      "final_distance": 0.5074176788330078,
+      "physics_steps": 912,
+      "sim_seconds": 30.4,
+      "raw_return": 169.14517632173374,
+      "final_distance": 0.6159264445304871,
       "final_speed": 0.0,
-      "min_clearance": 0.564887523651123
+      "min_clearance": 0.5021469593048096
     }
   ]
 }
