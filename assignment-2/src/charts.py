@@ -1,4 +1,5 @@
-"""Figures from the final observation-v2 measurements only."""
+"""Build figures from saved training logs and evaluation outcomes."""
+import argparse
 import csv
 import json
 from pathlib import Path
@@ -25,11 +26,72 @@ def curve(ax, data, label, color):
     ax.plot(data["decisions"][n-1:] / 1e6, rate, label=label, color=color)
 
 
+def recheck_figures(out):
+    current = json.loads(Path("artifacts/recheck/summary.json").read_text())
+    holdout = current["holdout"]
+    totals = []
+    for map_id in range(4):
+        rows = [r for r in holdout if r["map"] == map_id]
+        totals.append([sum(r[key] for r in rows) for key in ("successes", "episodes")])
+
+    teal, orange, slate = "#15806c", "#b44c2b", "#668296"
+    fig, (parking, collisions) = plt.subplots(1, 2, figsize=(11, 4), constrained_layout=True)
+    parking.barh(range(4), [100 * k / n for k, n in totals], color=teal, height=.55)
+    for y, (k, n) in enumerate(totals):
+        parking.text(103, y, f"{k} / {n}", va="center")
+    parking.set(yticks=range(4), yticklabels=[f"Карта {m}" for m in range(4)],
+                xlabel="Успешные парковки, %", title="Парковки на новых стартах",
+                xlim=(0, 124), xticks=[0, 25, 50, 75, 100])
+    parking.invert_yaxis()
+    parking.grid(axis="x", alpha=.2)
+
+    pairs = current["map2_matched_comparison"]
+    x = np.arange(len(pairs))
+    for key, label, offset, color in [
+        ("published", "Версия от 2 ноября", -.18, slate),
+        ("revised", "Текущая версия", .18, orange),
+    ]:
+        bars = collisions.bar(x + offset, [r[key]["collisions"] for r in pairs], .34,
+                              label=label, color=color)
+        collisions.bar_label(bars, padding=3)
+    collisions.set(title="Карта 2 на одинаковых стартах",
+                   ylabel="Столкновения из 2048 поездок",
+                   xticks=x, xticklabels=[f'{a}–{b}' for a, b in (r["seed_range"] for r in pairs)],
+                   xlabel="Диапазон seed", ylim=(0, 10))
+    collisions.grid(axis="y", alpha=.2)
+    collisions.legend(frameon=False, loc="upper left")
+    fig.savefig(out / "recheck.png")
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(8.5, 3.6), constrained_layout=True)
+    models = json.loads(Path("artifacts/final_models.json").read_text())["checkpoints"]
+    for map_id, color in [(1, "#2467a6"), (2, teal)]:
+        checkpoint = Path(models[str(map_id)])
+        config = json.loads((Path("artifacts") / checkpoint.with_suffix(".json")).read_text())
+        data = training(checkpoint.parent)
+        curve(ax, data, f"Карта {map_id}", color)
+        selected = data["decisions"][config["completed_updates"] - 1] / 1e6
+        ax.axvline(selected, linestyle="--", color=color, alpha=.65)
+    ax.set(title="Дообучение карт 1 и 2 в исправленной среде",
+           xlabel="Решения с начала дообучения, млн",
+           ylabel="Доля парковок за 10 обновлений", ylim=(-.03, 1.03))
+    ax.grid(alpha=.2)
+    ax.legend(frameon=False, loc="lower right")
+    fig.savefig(out / "finetuning.png")
+    plt.close(fig)
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--recheck-only", action="store_true", help="Generate only the current figures")
+    args = parser.parse_args()
     plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False,
                          "figure.dpi": 150, "savefig.bbox": "tight"})
     out = Path("artifacts/figures")
     out.mkdir(parents=True, exist_ok=True)
+    recheck_figures(out)
+    if args.recheck_only:
+        return
     colors = ["#2467a6", "#168765", "#bd8619", "#b94747"]
     fig, axes = plt.subplots(1, 2, figsize=(11, 4), constrained_layout=True)
     for seed in range(3):
