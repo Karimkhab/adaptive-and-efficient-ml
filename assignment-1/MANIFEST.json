@@ -1,7 +1,8 @@
 {
   ".gitignore": "9e67e302b90ef23ed894a1f45c30c020402e28ca31e64588ea7540302403f7e6",
-  "README.md": "10ffdf49f40969ac5fd627a49092abee430767e6b37cb9ce467a1cb622619f82",
-  "REPORT.md": "ead8f2e5fe9e02cee0021fd4598386942c397a976b2153e34683ecf0a453769b",
+  "README.md": "c94d00fbea7b413ea0953524400d3c3ded726b3f9842923ce6dd80b820ca96a2",
+  "REPORT.md": "5d0937d8745be9058cb9e47ea1c228327cc738ffe7f4d349870d870bc8b7cf99",
+  "artifacts/README.md": "4282300faef511520222a555c6a511ec45c5b72a54fa6835020c6e1b4eb4e2ba",
   "artifacts/demo.json": "d83736821fee8ddc560eba810b89364b37cf6de05e86eccadb5a6059733a1b79",
   "artifacts/demo.mp4": "dcd29ed0cc84f35054a020fc911d0a92ff86a5a4093abec0f1b4fc509e8c60a1",
   "artifacts/evaluation.json": "e7e00bf3f5611fd130e158188b0206e48beb82acdf1b2329e803176784d85073",
@@ -12,6 +13,7 @@
   "artifacts/final_map0.png": "c56c031e613e0e0c5ecd7042b14873d293e0f43f91d4da5fa7be364a8772372a",
   "artifacts/final_map2.png": "5d74d9a6a5df7279a5d0d995ca86f935a904099b7b34ffc8dcfbbd6099b92919",
   "artifacts/final_map3.png": "aaa9a3c532b11ff6a2ab59e7fa82ad52a546a0ffb549cb7ff3664def0fcf1d17",
+  "artifacts/maps.png": "a06641bf14a5ce4d96e44cd2cfa254ad82d62211efbc02b73339c04a53249290",
   "artifacts/precision_comparison.json": "42cf0e61efb7857945e55dae3785f8a0697735ce80fc059abd66f51cd8c3c1f0",
   "artifacts/preview_map0.png": "89b6787685ffaa9e17ba44bf2d64e29552705db6f607b0e7cce37a224a3fe16a",
   "artifacts/preview_map2.png": "9652b54fe13b7c3c9f089feac9cc69d3e61750f98d88a4da162148ad8aa5e99e",
