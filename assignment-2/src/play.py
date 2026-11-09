@@ -9,6 +9,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--map", type=int)
+    parser.add_argument("--cross-traffic", action="store_true", help="Add cross traffic to map 4")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--randomize", action="store_true")
     parser.add_argument("--seed", type=int, default=20000)
@@ -26,7 +27,10 @@ def main():
     policy = Policy(args.checkpoint)
     config = policy.config
     map_id = config["map"] if args.map is None else args.map
-    p, initial = RobotaxiEnv.init_params(jax.random.PRNGKey(0), map_id=map_id, max_steps=config["max_steps"])
+    if args.cross_traffic and map_id != 4:
+        parser.error("--cross-traffic requires map 4")
+    p, initial = RobotaxiEnv.init_params(jax.random.PRNGKey(0), map_id=map_id,
+                                        max_steps=config["max_steps"], cross_traffic=args.cross_traffic)
     obs, state = RobotaxiEnv.reset(jax.random.PRNGKey(args.seed), p, initial, randomize=args.randomize)
     front = TaxiFrontend(p, state, headless=args.headless)
     ret = 0.
@@ -53,10 +57,13 @@ def main():
             front.clock.tick(p.fps)
         if bool(done):
             break
-    print(json.dumps({"map": map_id, "goal_reached": bool(info["goal_reached"]),
+    result = {"map": map_id, "goal_reached": bool(info["goal_reached"]),
         "collision": bool(info["collision"]), "truncated": bool(info["truncated"]),
         "final_speed": float(state.speed), "final_distance": float(info["distance_to_goal"]),
-        "steps": int(state.time), "raw_return": ret}))
+        "steps": int(state.time), "raw_return": ret}
+    if map_id == 4:
+        result["cross_traffic"] = args.cross_traffic
+    print(json.dumps(result))
     pygame.quit()
 
 

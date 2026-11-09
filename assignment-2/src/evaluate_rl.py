@@ -18,14 +18,14 @@ from env.robotaxi import DEFAULT_HEADING_NOISE, RobotaxiEnv
 
 
 def evaluate(params, config, map_id, episodes=32, seed=2000, heading_noise=None,
-             policy="trained", stochastic=False, randomize=True, variants=False):
+             policy="trained", stochastic=False, randomize=True, variants=False, *, cross_traffic=False):
     if heading_noise is None:
         heading_noise = DEFAULT_HEADING_NOISE if randomize else 0.
     if not math.isfinite(heading_noise) or heading_noise < 0:
         raise ValueError("heading noise must be finite and nonnegative")
     repeat=control_repeat(config)
     p, initial, reset, step = make_env(map_id, repeat, config["max_steps"], heading_noise,
-                                     randomize=randomize)
+                                     randomize=randomize, cross_traffic=cross_traffic)
     reset_batch, step_batch = jax.vmap(reset), jax.vmap(step)
     if variants:
         from scenarios import VARIANTS, vary_initial_state
@@ -110,6 +110,8 @@ def evaluate(params, config, map_id, episodes=32, seed=2000, heading_noise=None,
                    "return": float(returns[i]), "final_distance": float(info["distance"][-1, i]),
                    "final_speed": float(states.speed[i]),
                    "physics_steps": int(states.time[i])} for i in range(episodes)]}
+    if map_id == 4:
+        summary["cross_traffic"] = cross_traffic
     return summary, {"positions": np.asarray(positions), "headings": np.asarray(headings),
                      "returns": returns, "success": success}
 
@@ -118,6 +120,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--maps", type=int, nargs="+", default=[3])
+    parser.add_argument("--cross-traffic", action="store_true", help="Add cross traffic to map 4")
     parser.add_argument("--episodes", type=int, default=32)
     parser.add_argument("--seed", type=int, default=2000)
     reset_mode = parser.add_mutually_exclusive_group()
@@ -129,6 +132,8 @@ def main():
     reset_mode.add_argument("--variants", action="store_true")
     parser.add_argument("--output", type=Path, default=Path("artifacts/evaluation.json"))
     args = parser.parse_args()
+    if args.cross_traffic and args.maps != [4]:
+        parser.error("--cross-traffic requires --maps 4")
     if args.heading_noise is not None and (not math.isfinite(args.heading_noise) or args.heading_noise < 0):
         parser.error("heading noise must be finite and nonnegative")
     params, config = load_checkpoint(args.checkpoint)
@@ -139,7 +144,7 @@ def main():
         result, traces = evaluate(params, config, map_id, args.episodes, args.seed,
                                   0. if args.canonical else args.heading_noise,
                                   args.policy, args.stochastic, randomize=not args.canonical,
-                                  variants=args.variants)
+                                  variants=args.variants, cross_traffic=args.cross_traffic)
         summaries.append(result)
         print(json.dumps({k: v for k, v in result.items() if k != "per_episode"}), flush=True)
         args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -14,7 +14,7 @@ from controller import demo_action
 from env.robotaxi import RobotaxiEnv
 
 
-SCENES = ["Campus detour", "Inner courtyard", "Service lane", "Crossing traffic"]
+SCENES = ["Campus detour", "Inner courtyard", "Service lane", "Crossing traffic", "Island detour"]
 INK = (25, 37, 49)
 MUTED = (103, 119, 130)
 AMBER = (250, 193, 66)
@@ -149,7 +149,10 @@ class TaxiFrontend(PygameFrontend):
         self.screen.fill((233, 238, 240))
         self.label("CAMPUS TAXI", (28, 24), font=self.title)
         self.label("JAX / VEHICLE ENVIRONMENT", (30, 66), MUTED, small=True)
-        self.label(f"{map_id + 1:02d}  /  {SCENES[map_id]}", (410, 37))
+        scene = SCENES[map_id]
+        if map_id == 4 and self.state.kinematic_obstacles.shape[0]:
+            scene += " + traffic"
+        self.label(f"{map_id + 1:02d}  /  {scene}", (410, 37))
         if self.playback_speed != 1:
             self.label(f"{self.playback_speed}x PLAYBACK", (410, 70), MUTED, small=True)
         status = "PAUSED" if self.paused else "RUNNING"
@@ -241,7 +244,7 @@ class TaxiFrontend(PygameFrontend):
         self.label("Trained neural policy" if is_ppo else ("No trained policy" if is_demo else "You control the vehicle"), (x, 605), MUTED, small=True)
 
         pygame.draw.rect(self.screen, (249, 251, 250), (24, 660, 1232, 116), border_radius=18)
-        self.label("PPO / observed features only   Z  Zoom   L  Rays   C  Colliders   ESC  Exit" if is_ppo else "TAB  Demo/manual   SPACE  Pause   R  Reset   1-4  Map   Z  Zoom   L  Rays   C  Colliders   ESC  Exit", (46, 683))
+        self.label("PPO / observed features only   Z  Zoom   L  Rays   C  Colliders   ESC  Exit" if is_ppo else "TAB  Demo/manual   SPACE  Pause   R  Reset   1-5  Map   Z  Zoom   L  Rays   C  Colliders   ESC  Exit", (46, 683))
         self.label(mode if is_ppo else "W / Up: accelerate    S / Down: brake    A / Left, D / Right: steer", (46, 716), MUTED, small=True)
         self.label("Gold: taxi + trail    Coral: moving traffic    Grey: static obstacles    Teal: reference path / goal", (46, 743), MUTED, small=True)
         if not self.headless:
@@ -289,7 +292,7 @@ class TaxiFrontend(PygameFrontend):
         elif event.key == pygame.K_r:
             self.reset_episode()
             return True
-        elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4):
+        elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5):
             self.reset_episode(event.key - pygame.K_1)
             return True
         return False

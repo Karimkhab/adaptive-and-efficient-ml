@@ -227,10 +227,12 @@ class RobotaxiEnv(BaseEnv):
     def init_params(key, map_id=0, max_steps=3000, path_length=100,
                     discretization_scale=1, perception_radius=12.,
                     num_ray_sensors=32, fov=math.pi, fps=30,
-                    cell_size=5., radius=1.):
+                    cell_size=5., radius=1., *, cross_traffic=False):
         del key
-        if map_id not in (0, 1, 2, 3):
-            raise ValueError("map_id must be 0, 1, 2 or 3 (open demonstration)")
+        if map_id not in (0, 1, 2, 3, 4):
+            raise ValueError("map_id must be between 0 and 4")
+        if cross_traffic and map_id != 4:
+            raise ValueError("cross_traffic is only a variant of map 4")
         if discretization_scale != 1:
             raise ValueError("Only discretization_scale=1 is supported")
         if fps <= 0 or max_steps < 1 or path_length < 2 or num_ray_sensors < 4:
@@ -239,12 +241,26 @@ class RobotaxiEnv(BaseEnv):
             raise ValueError("cell_size must exceed the collision diameter")
         physics_dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
         task = BaseTaskSampler(min(map_id, 2))
-        if map_id == 3:
-            task.static_obstacles = jnp.array([
+        if map_id in (3, 4):
+            # The two map 4 variants share the layout and static reference path.
+            static_cells = [
                 [r, c] for r in range(10) for c in range(20)
-                if r in (0, 9) or c in (0, 19)], dtype=physics_dtype)
-            task.kinematic_obstacles = jnp.array([[3., 10.]])
-            task.kinematic_obst_velocities = jnp.array([[0., -0.5]])
+                if r in (0, 9) or c in (0, 19)]
+            if map_id == 4:
+                static_cells.extend((r, c) for r in range(4, 8) for c in range(8, 12))
+                # Close the gaps between perimeter colliders to the vehicle.
+                static_cells.extend((r, c) for r in (4, 7) for c in (8.5, 9.5, 10.5))
+                static_cells.extend((r, c) for r in (4.5, 5.5, 6.5) for c in (8, 11))
+            task.static_obstacles = jnp.array(static_cells, dtype=physics_dtype)
+            if map_id == 3:
+                task.kinematic_obstacles = jnp.array([[3., 10.]])
+                task.kinematic_obst_velocities = jnp.array([[0., -0.5]])
+            elif cross_traffic:
+                task.kinematic_obstacles = jnp.array([[1., 13.]])
+                task.kinematic_obst_velocities = jnp.array([[0., -0.62]])
+            else:
+                task.kinematic_obstacles = jnp.empty((0, 2), dtype=physics_dtype)
+                task.kinematic_obst_velocities = jnp.empty((0, 2), dtype=physics_dtype)
             task.agent_pos = jnp.array([5., 3.])
             task.goal_pos = jnp.array([5., 16.])
             task.agent_forward_dir = jnp.array([1., 0.])

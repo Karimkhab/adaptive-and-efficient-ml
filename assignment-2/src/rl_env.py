@@ -31,10 +31,11 @@ def route_potential(position, path):
 
 def make_env(map_id=3, repeat=6, max_steps=3000, heading_noise=None, route_reward=False,
              randomize=False, parking_reward=False, cruise_speed=4., speed_cost=.1,
-             clearance_cost=0., clearance_margin=1., clearance_speed=False):
+             clearance_cost=0., clearance_margin=1., clearance_speed=False, *, cross_traffic=False):
     if heading_noise is None:
         heading_noise = DEFAULT_HEADING_NOISE if randomize else 0.
-    p, initial = RobotaxiEnv.init_params(jax.random.PRNGKey(0), map_id=map_id, max_steps=max_steps)
+    p, initial = RobotaxiEnv.init_params(jax.random.PRNGKey(0), map_id=map_id, max_steps=max_steps,
+                                        cross_traffic=cross_traffic)
 
     def reset(key):
         if randomize:

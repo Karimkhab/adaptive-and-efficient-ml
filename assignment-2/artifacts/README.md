@@ -4,6 +4,7 @@
 | --- | --- |
 | Как едут готовые модели | [Видео четырёх парковок](demo.mp4) · [Исходы показанных поездок](demo.json) |
 | Сколько поездок успешны | [График текущих результатов](figures/recheck.png) · [Данные по каждому старту](recheck/summary.json) |
+| Как PPO ведёт себя на незнакомой карте | [Схема карты 4, результаты и исходы по seed](map4_validation/README.md) |
 | Как шло дообучение | [Кривые для карт 1 и 2](figures/finetuning.png) · [Сравнение кандидатов](recheck/selection.json) |
 | Что показали исходные эксперименты | [Кривые обучения](figures/learning.png) · [Сравнение наград](figures/evaluation.png) · [Траектории](figures/trajectories.png) · [Исходы](evaluation/summary.json) |
 | Как измерены точность и скорость | [float32 и float64](precision_comparison.json) · [Бенчмарк шага среды](benchmark.json) · [Время сбора опыта](recheck/reset_performance.json) |
